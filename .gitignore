@@ -1,0 +1,21 @@
+
+###> symfony/framework-bundle ###
+/.env.local
+/.env.local.php
+/.env.*.local
+/config/secrets/prod/prod.decrypt.private.php
+/public/bundles/
+/var/
+/vendor/
+###< symfony/framework-bundle ###
+
+/.secrets/
+/.env
+/.env.dev
+/.env.prod
+/ionos-db.cnf
+/apply_rota_check.py
+/fix_manual_checks.py
+/rota_check_snippet.txt
+/node_modules/
+/create-github-key.shn
