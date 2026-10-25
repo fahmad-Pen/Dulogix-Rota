@@ -13,6 +13,7 @@ security:
         main:
             lazy: true
             provider: app_users
+            user_checker: App\Controller\ActiveUserChecker
             form_login:
                 login_path: app_login
                 check_path: app_login

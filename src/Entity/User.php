@@ -31,6 +31,21 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(type: 'json')]
     private array $roles = [];
 
+    #[ORM\Column(options: ['default' => true])]
+    private bool $active = true;
+
+    public function isActive(): bool { return $this->active; }
+    public function setActive(bool $active): self { $this->active = $active; return $this; }
+
+    #[ORM\Column(type: 'json', options: ['default' => '[]'])]
+    private array $sections = [];
+
+    public function getSections(): array { return $this->sections; }
+    public function setSections(array $sections): self {
+        $this->sections = array_values(array_unique(array_intersect($sections, array_keys(\App\Controller\SectionAccess::SECTIONS))));
+        return $this;
+    }
+
     #[ORM\Column]
     private string $password = '';
 
