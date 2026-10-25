@@ -46,4 +46,4 @@ jobs:
         run: |
           ssh -i ~/.ssh/dulogix_ionos -o BatchMode=yes -o StrictHostKeyChecking=yes \
             su746574@access-5021721738.webspace-host.com \
-            'set -e; cd /home/www/public/Dulogix-app; /usr/bin/php8.5 bin/console doctrine:migrations:migrate --env=prod --no-debug --no-interaction; /usr/bin/php8.5 bin/console doctrine:schema:validate --env=prod --no-debug; /usr/bin/php8.5 bin/console cache:clear --env=prod --no-debug'
+            'set -e; cd /home/www/public/Dulogix-app; /usr/bin/php8.5 bin/console cache:clear --env=prod --no-debug; /usr/bin/php8.5 bin/console doctrine:migrations:migrate --env=prod --no-debug --no-interaction; /usr/bin/php8.5 bin/console doctrine:schema:validate --env=prod --no-debug'
