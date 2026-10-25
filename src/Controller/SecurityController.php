@@ -18,7 +18,8 @@ final class SecurityController extends AbstractController
         }
         $error = $authenticationUtils->getLastAuthenticationError();
         $email = htmlspecialchars($authenticationUtils->getLastUsername(), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-        $message = $error ? '<p class="error">Invalid email or password.</p>' : '';
+        $inactive = $error instanceof \Symfony\Component\Security\Core\Exception\CustomUserMessageAccountStatusException;
+        $message = $error ? '<p class="error">'.($inactive ? 'Your account is not active. Please contact your manager.' : 'Invalid username or password.').'</p>' : '';
         $csrf = htmlspecialchars($csrfManager->getToken('authenticate')->getValue(), ENT_QUOTES, 'UTF-8');
         return new Response(<<<HTML
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Dulogix · Sign in</title><link rel="icon" type="image/png" href="/favicon.png"><style>

@@ -302,7 +302,7 @@ final class AccountController extends AbstractController
 
     private function page(string $title, string $body): Response
     {
-        return new Response('<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Dulogix · '.htmlspecialchars($title).'</title><link rel="icon" type="image/png" href="/favicon.png"><style>*{box-sizing:border-box}body{font:13px system-ui;background:#f5f7fb;color:#24364b;margin:0}header{background:#152d49;color:white;padding:12px 20px}header img{height:32px;width:auto;vertical-align:middle;margin-right:16px;background:white;border-radius:4px;padding:2px}header a{color:#d6e8fc;margin-right:18px}main{max-width:1080px;margin:16px auto;padding:0 12px}.panel{background:white;border:1px solid #e0e7ef;border-radius:7px;padding:14px;margin-bottom:12px}h1{font-size:18px;margin:0 0 12px}h2{font-size:14px}label{display:block;font-weight:600;margin:8px 0 4px}input,select{padding:7px;border:1px solid #cbd7e4;border-radius:4px;width:100%;max-width:420px}.phone-row{display:flex;gap:8px;width:100%;max-width:420px}.phone-row select{width:195px;flex:0 0 195px;min-width:0}.phone-row input{width:0;min-width:0;flex:1 1 auto}button{padding:8px 12px;border:0;border-radius:4px;background:#1a4c77;color:white;cursor:pointer;margin-top:12px}table{width:100%;border-collapse:collapse}th,td{padding:7px;text-align:left;border-bottom:1px solid #e5eaf1}tr:nth-child(even){background:#f1f5fa}.error{color:#b22e36}.ok{color:#13774b}</style></head><body><header><a href="/"><img src="/dulogix-logo.png" alt="Dulogix"></a> '.($this->isGranted('ROLE_OPERATIONS') ? '<a href="/">Rota</a><a href="/admin/users">Users</a>' : '').($this->isGranted('ROLE_DRIVER') ? '<a href="/driver/availability">My availability</a>' : '').($this->isGranted('ROLE_ADMIN') ? '<a href="/driver/availability?preview=1">Driver preview</a>' : '').'<a href="/account">My account</a><a href="/logout">Sign out</a></header><main><h1>'.htmlspecialchars($title).'</h1>'.$body.'</main></body></html>');
+        return new Response('<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Dulogix · '.htmlspecialchars($title).'</title><link rel="icon" type="image/png" href="/favicon.png"><style>*{box-sizing:border-box}body{font:13px system-ui;background:#f5f7fb;color:#24364b;margin:0}header{background:#152d49;color:white;padding:12px 20px}header img{height:32px;width:auto;vertical-align:middle;margin-right:16px;background:white;border-radius:4px;padding:2px}header a{color:#d6e8fc;margin-right:18px}main{max-width:1080px;margin:16px auto;padding:0 12px}.panel{background:white;border:1px solid #e0e7ef;border-radius:7px;padding:14px;margin-bottom:12px}h1{font-size:18px;margin:0 0 12px}h2{font-size:14px}label{display:block;font-weight:600;margin:8px 0 4px}input,select{padding:7px;border:1px solid #cbd7e4;border-radius:4px;width:100%;max-width:420px}.phone-row{display:flex;gap:8px;width:100%;max-width:420px}.phone-row select{width:195px;flex:0 0 195px;min-width:0}.phone-row input{width:0;min-width:0;flex:1 1 auto}button{padding:8px 12px;border:0;border-radius:4px;background:#1a4c77;color:white;cursor:pointer;margin-top:12px}table{width:100%;border-collapse:collapse}th,td{padding:7px;text-align:left;border-bottom:1px solid #e5eaf1}tr:nth-child(even){background:#f1f5fa}.error{color:#b22e36}.ok{color:#13774b}</style>'.SectionAccess::CSS.'</head><body><header><a href="/"><img src="/dulogix-logo.png" alt="Dulogix"></a> '.SectionAccess::navigation($this->getUser()).'</header><main><h1>'.htmlspecialchars($title).'</h1>'.$body.'</main></body></html>');
     }
 
     #[Route('/admin/users', name: 'admin_users', methods: ['GET', 'POST'])]
@@ -321,10 +321,21 @@ final class AccountController extends AbstractController
             $role = (string) $request->request->get('role');
             $type = (string) $request->request->get('driver_type', 'DRIVER');
             $password = (string) $request->request->get('password');
-            if (!preg_match('/^[a-z0-9._-]{3,80}$/', $username) || $name === '' || $phone === null || !filter_var($email, FILTER_VALIDATE_EMAIL) || !in_array($role, $this->isGranted('ROLE_ADMIN') ? ['ROLE_DRIVER', 'ROLE_MANAGER', 'ROLE_ADMIN', 'ROLE_USER'] : ['ROLE_DRIVER'], true) || !in_array($type, ['MANAGER','DRIVER','JUMPER'], true) || ($type === 'MANAGER' && $role !== 'ROLE_MANAGER') || strlen($password) < 12 || $em->getRepository(User::class)->findOneBy(['username' => $username]) || $em->getRepository(User::class)->findOneBy(['email' => $email])) {
-                $message = '<p class="error">Check fields: unique username/email, password at least 12 characters, valid role.</p>';
+            $errors = [];
+            if (!preg_match('/^[a-z0-9._-]{3,80}$/', $username)) $errors[] = 'Username must be 3–80 characters and contain only lowercase letters, numbers, dots, underscores or hyphens.';
+            if ($name === '') $errors[] = 'Full name is required.';
+            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) $errors[] = 'Enter a valid email address.';
+            if ($phone === null) $errors[] = 'Enter a valid phone number for the selected country.';
+            if (!in_array($role, $this->isGranted('ROLE_ADMIN') ? ['ROLE_DRIVER','ROLE_MANAGER','ROLE_ADMIN','ROLE_USER'] : ['ROLE_DRIVER'], true)) $errors[] = 'Select a valid account type.';
+            if (!in_array($type, ['MANAGER','DRIVER','JUMPER'], true) || ($type === 'MANAGER' && $role !== 'ROLE_MANAGER')) $errors[] = 'Operational type does not match the account type.';
+            if (strlen($password) < 12) $errors[] = 'Temporary password must contain at least 12 characters (currently '.strlen($password).').';
+            if ($em->getRepository(User::class)->findOneBy(['username' => $username])) $errors[] = 'This username is already in use.';
+            if ($email !== '' && $em->getRepository(User::class)->findOneBy(['email' => $email])) $errors[] = 'This email address is already in use.';
+            if ($errors) {
+                $message = '<div class="panel error" role="alert"><strong>Account could not be created:</strong><ul><li>'.implode('</li><li>',array_map(static fn($error)=>htmlspecialchars($error,ENT_QUOTES),$errors)).'</li></ul>Your details are preserved below; please correct the highlighted issues.</div>';
             } else {
                 $user = (new User())->setUsername($username)->setDisplayName($name)->setEmail($email)->setPhone($phone ?: null)->setRoles([$role])->setDriverType($type);
+                $user->setSections($this->isGranted('ROLE_ADMIN') && $role === 'ROLE_MANAGER' ? $request->request->all('sections') : []);
                 $user->setPassword($hasher->hashPassword($user, $password));
                 $em->persist($user);
                 $em->flush();
@@ -333,10 +344,17 @@ final class AccountController extends AbstractController
         }
         $rows = '';
         foreach ($em->getRepository(User::class)->findBy([], ['id' => 'ASC']) as $user) {
-            $rows .= '<tr><td>'.htmlspecialchars($user->getUsername()).'</td><td>'.htmlspecialchars($user->getDisplayName()).'</td><td>'.htmlspecialchars($user->getEmail()).'</td><td>'.htmlspecialchars($user->getPhone() ?? '').'</td><td>'.htmlspecialchars(implode(', ', $user->getRoles())).'</td><td>'.htmlspecialchars($user->getDriverType()).'</td><td><a href="/admin/users/edit/'.$user->getId().'" style="display:inline-block;padding:8px 12px;margin-right:8px;background:#1a4c77;color:white;border-radius:4px;text-decoration:none">Edit</a> '.($this->isGranted('ROLE_ADMIN') && $user->getId() !== $this->getUser()?->getId() ? '<form method="post" action="/admin/users/delete/'.$user->getId().'"><input type="hidden" name="_token" value="'.htmlspecialchars($csrfManager->getToken('delete_user_'.$user->getId())->getValue()).'"><button type="submit" onclick="return confirm(&quot;Delete this account permanently?&quot;)">Delete</button></form>' : '').'</td></tr>';
+            if (!$this->isGranted('ROLE_ADMIN') && !in_array('ROLE_DRIVER', $user->getRoles(), true)) continue;
+            $rows .= '<tr><td>'.htmlspecialchars($user->getUsername()).'</td><td>'.htmlspecialchars($user->getDisplayName()).'</td><td>'.htmlspecialchars($user->getEmail()).'</td><td>'.htmlspecialchars($user->getPhone() ?? '').'</td><td>'.htmlspecialchars(implode(', ', $user->getRoles())).'</td><td>'.htmlspecialchars($user->getDriverType()).'</td><td><span style="display:inline-block;padding:4px 10px;border-radius:999px;font-weight:700;background:'.($user->isActive() ? '#dcfce7;color:#166534' : '#fee2e2;color:#991b1b').'">'.($user->isActive() ? '● Active' : '● Inactive').'</span></td><td><a href="/admin/users/edit/'.$user->getId().'" style="display:inline-block;padding:8px 12px;margin-right:8px;background:#1a4c77;color:white;border-radius:4px;text-decoration:none">Edit</a> '.($this->isGranted('ROLE_ADMIN') && $user->getId() !== $this->getUser()?->getId() ? '<form method="post" action="/admin/users/delete/'.$user->getId().'"><input type="hidden" name="_token" value="'.htmlspecialchars($csrfManager->getToken('delete_user_'.$user->getId())->getValue()).'"><button type="submit" onclick="return confirm(&quot;Delete this account permanently?&quot;)">Delete</button></form>' : '').'</td></tr>';
         }
+        $posted = $request->isMethod('POST') && !empty($errors);
+        $old = static fn(string $field) => $posted ? htmlspecialchars((string)$request->request->get($field, ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') : '';
+        $oldRole = $posted ? (string)$request->request->get('role') : 'ROLE_DRIVER';
+        $oldType = $posted ? (string)$request->request->get('driver_type') : 'DRIVER';
+        $oldSections = $posted ? $request->request->all('sections') : [];
+        $country = $posted ? (string)$request->request->get('country_code', '+44') : '+44';
         $token = $csrfManager->getToken('create_user')->getValue();
-        $body = $message.'<div class="panel"><h2>Create user account</h2><form method="post"><input type="hidden" name="_token" value="'.htmlspecialchars($token).'"><label>Username</label><input name="username" required minlength="3"><label>Full name</label><input name="name" required><label>Email</label><input type="email" name="email" required><label>Phone</label><div class="phone-row"><select name="country_code" aria-label="Country code">'.$this->phoneOptions().'</select><input name="phone" type="tel" inputmode="tel" placeholder="7700 900123"></div><label>Account type</label><select name="role"><option value="ROLE_DRIVER">Driver</option>'.($this->isGranted('ROLE_ADMIN') ? '<option value="ROLE_USER">User</option>' : '').($this->isGranted('ROLE_ADMIN') ? '<option value="ROLE_MANAGER">Manager</option><option value="ROLE_ADMIN">Administrator</option>' : '').'</select><label>Operational type</label><select name="driver_type"><option value="DRIVER">Driver</option><option value="JUMPER">Jumper</option>'.($this->isGranted('ROLE_ADMIN') ? '<option value="MANAGER">Manager</option>' : '').'</select><label>Temporary password (12+ characters)</label><input name="password" type="password" minlength="12" required autocomplete="new-password"><button>Create account</button></form></div><div class="panel"><h2>Existing users</h2><div style="overflow:auto"><table><thead><tr><th>Username</th><th>Name</th><th>Email</th><th>Phone</th><th>Role</th><th>Type</th><th>Actions</th></tr></thead><tbody>'.$rows.'</tbody></table></div></div>';
+        $body = $message.'<div class="panel"><h2>Create user account</h2><form method="post"><input type="hidden" name="_token" value="'.htmlspecialchars($token).'"><label>Username</label><input name="username" value="'.$old('username').'" required minlength="3"><label>Full name</label><input name="name" value="'.$old('name').'" required><label>Email</label><input type="email" name="email" value="'.$old('email').'" required><label>Phone</label><div class="phone-row"><select name="country_code" aria-label="Country code">'.$this->phoneOptions($country).'</select><input name="phone" value="'.$old('phone').'" type="tel" inputmode="tel" placeholder="7700 900123"></div><label>Account type</label><select name="role"><option value="ROLE_DRIVER"'.($oldRole==='ROLE_DRIVER'?' selected':'').'>Driver</option>'.($this->isGranted('ROLE_ADMIN') ? '<option value="ROLE_USER"'.($oldRole==='ROLE_USER'?' selected':'').'>User</option>' : '').($this->isGranted('ROLE_ADMIN') ? '<option value="ROLE_MANAGER"'.($oldRole==='ROLE_MANAGER'?' selected':'').'>Manager</option><option value="ROLE_ADMIN"'.($oldRole==='ROLE_ADMIN'?' selected':'').'>Administrator</option>' : '').'</select><label>Operational type</label><select name="driver_type"><option value="DRIVER"'.($oldType==='DRIVER'?' selected':'').'>Driver</option><option value="JUMPER"'.($oldType==='JUMPER'?' selected':'').'>Jumper</option>'.($this->isGranted('ROLE_ADMIN') ? '<option value="MANAGER"'.($oldType==='MANAGER'?' selected':'').'>Manager</option>' : '').'</select>'.($this->isGranted('ROLE_ADMIN') ? '<fieldset id="manager-sections" style="display:none;margin:14px 0;border:1px solid #cbd7e4;border-radius:8px;padding:12px"><legend>Manager sections</legend><label style="display:flex;align-items:center;gap:8px"><input type="checkbox" name="sections[]" value="rota"'.(in_array('rota',$oldSections,true)?' checked':'').' style="width:auto;margin:0"> Rota Management</label><small>Assign one or more application sections to this manager.</small></fieldset><script>document.addEventListener("DOMContentLoaded",()=>{const role=document.querySelector("select[name=role]");const type=document.querySelector("select[name=driver_type]");const sections=document.getElementById("manager-sections");if(!role||!sections)return;const sync=()=>{sections.style.display=role.value==="ROLE_MANAGER"?"block":"none";if(type&&!type.dataset.initialized){type.dataset.initialized="1";}};role.addEventListener("change",()=>{sync();if(type)type.value=role.value==="ROLE_MANAGER"?"MANAGER":"DRIVER";});sync();});</script>' : '').'<label>Temporary password (12+ characters)</label><input name="password" type="password" minlength="12" required autocomplete="new-password"><button>Create account</button></form></div><div class="panel"><h2>Existing users</h2><div style="overflow:auto"><table><thead><tr><th>Username</th><th>Name</th><th>Email</th><th>Phone</th><th>Role</th><th>Type</th><th>Status</th><th>Actions</th></tr></thead><tbody>'.$rows.'</tbody></table></div></div>';
         return $this->page('User management', $body);
     }
 
@@ -363,6 +381,7 @@ final class AccountController extends AbstractController
                 $message='<p class="error">Check the account details and permissions.</p>';
             } else {
                 $user->setDisplayName($name)->setEmail($email)->setPhone($phone ?: null)->setDriverType($type)->setRoles([$role]);
+                if ($admin) $user->setSections($role === 'ROLE_MANAGER' ? $request->request->all('sections') : []);
                 $em->flush();
                 $message='<p class="ok">Account updated.</p>';
             }
@@ -379,7 +398,39 @@ final class AccountController extends AbstractController
             if (!$admin && $value!=='ROLE_DRIVER') continue;
             $roles.='<option value="'.$value.'"'.(in_array($value,$user->getRoles(),true)?' selected':'').'>'.$label.'</option>';
         }
-        return $this->page('Edit user', $message.'<div class="panel"><form method="post"><input type="hidden" name="_token" value="'.$e($csrfManager->getToken('edit_user_'.$id)->getValue()).'"><p>Username: <b>'.$e($user->getUsername()).'</b></p><label>Full name</label><input name="name" value="'.$e($user->getDisplayName()).'" required><label>Email</label><input name="email" type="email" value="'.$e($user->getEmail()).'" required><label>Phone</label><div class="phone-row"><select name="country_code">'.$this->phoneOptions($country).'</select><input name="phone" value="'.$e($local).'"></div><label>Account role</label><select name="role">'.$roles.'</select><label>Operational type</label><select name="driver_type">'.$options.'</select><br><button>Save account</button> <a href="/admin/users">Cancel</a></form></div>');
+        $driverControls = '';
+        if (in_array('ROLE_DRIVER', $user->getRoles(), true) && !in_array('ROLE_MANAGER', $user->getRoles(), true) && !in_array('ROLE_ADMIN', $user->getRoles(), true)) {
+            $statusToken = $e($csrfManager->getToken('status_driver_'.$id)->getValue());
+            $resetToken = $e($csrfManager->getToken('reset_driver_'.$id)->getValue());
+            $driverControls = '<div class="panel"><h2>Driver access</h2><p>Status: <strong>'.($user->isActive() ? 'Active' : 'Inactive').'</strong></p><form method="post" action="/admin/users/status/'.$id.'"><input type="hidden" name="_token" value="'.$statusToken.'"><button type="submit">'.($user->isActive() ? 'Deactivate driver' : 'Reactivate driver').'</button></form><h2>Reset driver password</h2><form method="post" action="/admin/users/reset-password/'.$id.'"><input type="hidden" name="_token" value="'.$resetToken.'"><label>New temporary password (12+ characters)</label><input type="password" name="temporary_password" minlength="12" required autocomplete="new-password"><button type="submit">Set temporary password</button></form></div>';
+        }
+        return $this->page('Edit user', $message.$driverControls.'<div class="panel"><form method="post"><input type="hidden" name="_token" value="'.$e($csrfManager->getToken('edit_user_'.$id)->getValue()).'"><p>Username: <b>'.$e($user->getUsername()).'</b></p><label>Full name</label><input name="name" value="'.$e($user->getDisplayName()).'" required><label>Email</label><input name="email" type="email" value="'.$e($user->getEmail()).'" required><label>Phone</label><div class="phone-row"><select name="country_code">'.$this->phoneOptions($country).'</select><input name="phone" value="'.$e($local).'"></div><label>Account role</label><select name="role">'.$roles.'</select><label>Operational type</label><select name="driver_type">'.$options.'</select><br><button>Save account</button> <a href="/admin/users">Cancel</a></form></div>');
+    }
+
+    #[Route('/admin/users/status/{id}', name: 'admin_user_status', requirements: ['id' => '\d+'], methods: ['POST'])]
+    public function changeDriverStatus(int $id, Request $request, EntityManagerInterface $em): Response
+    {
+        $this->denyAccessUnlessGranted('ROLE_OPERATIONS');
+        $user = $em->getRepository(User::class)->find($id);
+        if (!$user || !in_array('ROLE_DRIVER', $user->getRoles(), true) || in_array('ROLE_MANAGER', $user->getRoles(), true) || in_array('ROLE_ADMIN', $user->getRoles(), true)) throw $this->createAccessDeniedException();
+        if (!$this->isCsrfTokenValid('status_driver_'.$id, (string)$request->request->get('_token'))) throw $this->createAccessDeniedException();
+        $user->setActive(!$user->isActive());
+        $em->flush();
+        return $this->redirectToRoute('admin_users');
+    }
+
+    #[Route('/admin/users/reset-password/{id}', name: 'admin_user_reset_password', requirements: ['id' => '\d+'], methods: ['POST'])]
+    public function resetDriverPassword(int $id, Request $request, EntityManagerInterface $em, UserPasswordHasherInterface $hasher): Response
+    {
+        $this->denyAccessUnlessGranted('ROLE_OPERATIONS');
+        $user = $em->getRepository(User::class)->find($id);
+        if (!$user || !in_array('ROLE_DRIVER', $user->getRoles(), true) || in_array('ROLE_MANAGER', $user->getRoles(), true) || in_array('ROLE_ADMIN', $user->getRoles(), true)) throw $this->createAccessDeniedException();
+        if (!$this->isCsrfTokenValid('reset_driver_'.$id, (string)$request->request->get('_token'))) throw $this->createAccessDeniedException();
+        $password = (string)$request->request->get('temporary_password');
+        if (strlen($password) < 12) return new Response('Temporary password must be at least 12 characters.', 422);
+        $user->setPassword($hasher->hashPassword($user, $password));
+        $em->flush();
+        return $this->redirectToRoute('admin_user_edit', ['id' => $id]);
     }
 
     #[Route('/admin/users/delete/{id}', name: 'admin_user_delete', requirements: ['id' => '\d+'], methods: ['POST'])]
@@ -406,25 +457,26 @@ final class AccountController extends AbstractController
         /** @var User $user */
         $user = $this->getUser();
         $message = '';
+        $driverOnly = in_array('ROLE_DRIVER', $user->getRoles(), true) && !$this->isGranted('ROLE_OPERATIONS');
         if ($request->isMethod('POST')) {
             if (!$this->isCsrfTokenValid('edit_profile', (string) $request->request->get('_token'))) throw $this->createAccessDeniedException();
-            $email = mb_strtolower(trim((string) $request->request->get('email')));
-            $phone = $this->phoneValue($request);
-            $name = trim((string) $request->request->get('name'));
+            $email = $driverOnly ? $user->getEmail() : mb_strtolower(trim((string) $request->request->get('email')));
+            $phone = $driverOnly ? $user->getPhone() : $this->phoneValue($request);
+            $name = $driverOnly ? $user->getDisplayName() : trim((string) $request->request->get('name'));
             $newPassword = (string) $request->request->get('new_password');
             $currentPassword = (string) $request->request->get('current_password');
-            if (!filter_var($email, FILTER_VALIDATE_EMAIL) || $phone === null || $name === '' || mb_strlen($name) > 120 || mb_strlen($phone) > 40 || ($newPassword !== '' && strlen($newPassword) < 12) || ($newPassword !== '' && !$hasher->isPasswordValid($user, $currentPassword)) || (($existing = $em->getRepository(User::class)->findOneBy(['email' => $email])) && $existing->getId() !== $user->getId())) {
+            if (($driverOnly && $newPassword === '') || !filter_var($email, FILTER_VALIDATE_EMAIL) || $phone === null || $name === '' || mb_strlen($name) > 120 || mb_strlen($phone) > 40 || ($newPassword !== '' && strlen($newPassword) < 12) || ($newPassword !== '' && !$hasher->isPasswordValid($user, $currentPassword)) || (($existing = $em->getRepository(User::class)->findOneBy(['email' => $email])) && $existing->getId() !== $user->getId())) {
                 $message = '<p class="error">Check your details. New passwords need 12+ characters and your current password.</p>';
             } else {
-                $user->setEmail($email)->setPhone($phone ?: null)->setDisplayName($name);
+                if (!$driverOnly) $user->setEmail($email)->setPhone($phone ?: null)->setDisplayName($name);
                 if ($newPassword !== '') $user->setPassword($hasher->hashPassword($user, $newPassword));
                 $em->flush();
-                $message = '<p class="ok">Details saved.</p>';
+                $message = '<p class="ok">'.($driverOnly ? 'Password updated (if a new password was entered).' : 'Details saved.').'</p>';
             }
         }
         $e = static fn(?string $v) => htmlspecialchars($v ?? '', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         [$countryCode, $localPhone] = $this->phoneParts($user->getPhone());
         $token = $csrfManager->getToken('edit_profile')->getValue();
-        return $this->page('My account', $message.'<div class="panel"><form method="post"><input type="hidden" name="_token" value="'.$e($token).'"><p>Username: <b>'.$e($user->getUsername()).'</b></p><label>Full name</label><input name="name" required value="'.$e($user->getDisplayName()).'"><label>Email</label><input name="email" type="email" required value="'.$e($user->getEmail()).'"><label>Phone</label><div class="phone-row"><select name="country_code" aria-label="Country code">'.$this->phoneOptions($countryCode).'</select><input name="phone" type="tel" inputmode="tel" placeholder="7700 900123" value="'.$e($localPhone).'"></div><h2>Change password (optional)</h2><label>Current password</label><input name="current_password" type="password" autocomplete="current-password"><label>New password</label><input name="new_password" type="password" autocomplete="new-password" minlength="12"><br><button>Save changes</button></form></div>');
+        return $this->page('My account', $message.'<div class="panel"><form method="post"><input type="hidden" name="_token" value="'.$e($token).'"><p>Username: <b>'.$e($user->getUsername()).'</b></p>'.($driverOnly ? '<p><strong>Full name:</strong> '.$e($user->getDisplayName()).'</p><p><strong>Email:</strong> '.$e($user->getEmail()).'</p><p><strong>Phone:</strong> '.$e($user->getPhone() ?: 'Not provided').'</p><p>To update these details, contact your manager or administrator.</p>' : '<label>Full name</label><input name="name" required value="'.$e($user->getDisplayName()).'">').($driverOnly ? '<h2>Change password</h2>' : '<label>Email</label><input name="email" type="email" required value="'.$e($user->getEmail()).'"><label>Phone</label><div class="phone-row"><select name="country_code" aria-label="Country code">'.$this->phoneOptions($countryCode).'</select><input name="phone" type="tel" inputmode="tel" placeholder="7700 900123" value="'.$e($localPhone).'"></div><h2>Change password (optional)</h2>').'<label>Current password</label><input name="current_password" type="password" autocomplete="current-password"><label>New password</label><input name="new_password" type="password" autocomplete="new-password" minlength="12"><br><button>Save changes</button></form></div>');
     }
 }
