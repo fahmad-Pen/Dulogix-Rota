@@ -1,0 +1,102 @@
+name: Pull request checks
+
+on:
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  php-syntax:
+    name: PHP syntax
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          coverage: none
+      - name: Lint application and migration PHP
+        run: |
+          find src migrations config bin -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+
+  composer:
+    name: Composer validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          extensions: intl, pdo_mysql, zip
+          tools: composer:v2
+          coverage: none
+      - run: composer validate --strict --no-check-publish
+      - run: composer install --no-interaction --prefer-dist --no-progress --no-scripts
+      - run: composer check-platform-reqs
+
+  symfony:
+    name: Symfony configuration
+    runs-on: ubuntu-latest
+    env:
+      APP_ENV: test
+      APP_SECRET: ci-test-only-secret
+      DATABASE_URL: mysql://dulogix:dulogix@127.0.0.1:3306/dulogix?serverVersion=11.8.0-MariaDB
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          extensions: intl, pdo_mysql, zip
+          tools: composer:v2
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist --no-progress --no-scripts
+      - name: Create CI-only Symfony environment
+        run: |
+          printf 'APP_ENV=test\nAPP_SECRET=ci-test-only-secret\nDEFAULT_URI="http://localhost"\nDATABASE_URL="mysql://dulogix:dulogix@127.0.0.1:3306/dulogix?serverVersion=11.8.0-MariaDB"\n' > .env
+      - run: php bin/console lint:container --env=test
+      - run: php bin/console lint:twig templates --env=test
+      - run: php bin/console doctrine:schema:validate --skip-sync --env=test
+
+  migrations:
+    name: Database migrations
+    runs-on: ubuntu-latest
+    services:
+      mariadb:
+        image: mariadb:11.8
+        env:
+          MARIADB_DATABASE: dulogix_test
+          MARIADB_USER: dulogix
+          MARIADB_PASSWORD: dulogix
+          MARIADB_ROOT_PASSWORD: root-ci-only
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=15
+    env:
+      APP_ENV: test
+      APP_SECRET: ci-test-only-secret
+      DATABASE_URL: mysql://dulogix:dulogix@127.0.0.1:3306/dulogix?serverVersion=11.8.0-MariaDB
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          extensions: intl, pdo_mysql, zip
+          tools: composer:v2
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist --no-progress --no-scripts
+      - name: Create CI-only Symfony environment
+        run: |
+          printf 'APP_ENV=test\nAPP_SECRET=ci-test-only-secret\nDEFAULT_URI="http://localhost"\nDATABASE_URL="mysql://dulogix:dulogix@127.0.0.1:3306/dulogix?serverVersion=11.8.0-MariaDB"\n' > .env
+      - name: Execute migrations against disposable database
+        run: php bin/console doctrine:migrations:migrate --env=test --no-interaction
+      - name: Validate resulting schema
+        run: php bin/console doctrine:schema:validate --env=test
+      - name: Confirm no pending migrations
+        run: php bin/console doctrine:migrations:up-to-date --env=test

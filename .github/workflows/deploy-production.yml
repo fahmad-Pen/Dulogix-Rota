@@ -1,0 +1,49 @@
+name: Deploy production
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: dulogix-production
+  cancel-in-progress: false
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          tools: composer:v2
+          extensions: intl, pdo_mysql, zip
+          coverage: none
+      - name: Install dependencies
+        run: composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader --no-progress --no-scripts
+      - name: Configure SSH
+        env:
+          DEPLOY_KEY: ${{ secrets.IONOS_SSH_PRIVATE_KEY }}
+          KNOWN_HOSTS: ${{ secrets.IONOS_KNOWN_HOSTS }}
+        run: |
+          test -n "$DEPLOY_KEY" && test -n "$KNOWN_HOSTS"
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$DEPLOY_KEY" > ~/.ssh/dulogix_ionos
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/dulogix_ionos ~/.ssh/known_hosts
+      - name: Upload application
+        env:
+          RSYNC_RSH: ssh -i /home/runner/.ssh/dulogix_ionos -o BatchMode=yes -o StrictHostKeyChecking=yes
+        run: |
+          rsync -rtvz --no-perms --no-owner --no-group \
+            --exclude='.env.local' --exclude='.env.*.local' \
+            bin config migrations public src templates vendor \
+            composer.json composer.lock symfony.lock \
+            su746574@access-5021721738.webspace-host.com:/home/www/public/Dulogix-app/
+      - name: Run production migrations and validate schema
+        run: |
+          ssh -i ~/.ssh/dulogix_ionos -o BatchMode=yes -o StrictHostKeyChecking=yes \
+            su746574@access-5021721738.webspace-host.com \
+            'set -e; cd /home/www/public/Dulogix-app; /usr/bin/php8.5 bin/console doctrine:migrations:migrate --env=prod --no-debug --no-interaction; /usr/bin/php8.5 bin/console doctrine:schema:validate --env=prod --no-debug; /usr/bin/php8.5 bin/console cache:clear --env=prod --no-debug'
