@@ -21,10 +21,13 @@
 - Before destructive or externally consequential actions, seek confirmation.
 
 ## 3. Git and deployment
-- Two branches: develop (all development) and master (production-ready releases).
-- Merge tested and approved work from develop into master.
+- Primary branches: `develop` (development) and `main` (production). Merge tested changes through a manually approved pull request from `develop` into `main`.
+- Follow Conventional Commits for all new commits and PR titles: `type(scope): concise imperative description` (scope optional). Types include `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `ci`, `build`, and `perf`.
+- Examples: `feat(rota): add weekly availability`, `fix(auth): correct login redirect`, `ci(deploy): protect production settings`.
+- Use descriptive short-lived branch names such as `feat/driver-availability` or `fix/login-redirect`. Mark breaking changes with `!` or a `BREAKING CHANGE:` footer.
 - Use GitHub with SSH authentication; create a project-appropriate SSH key without exposing the private key.
-- Deploy master to IONOS hosting using GitHub Actions; confirm hosting capabilities and deployment method before implementation.
+- Deploy `main` to IONOS using GitHub Actions after the approved pull request is merged; never deploy from `master`.
+- During reconciliation, production is the source of truth. For future changes, develop and test locally first.
 - Never commit credentials, secrets, private keys or environment-specific sensitive data.
 
 ## 4. Roles and access

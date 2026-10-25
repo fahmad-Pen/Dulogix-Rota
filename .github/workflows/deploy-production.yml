@@ -42,9 +42,8 @@ jobs:
             bin config migrations public src templates vendor \
             composer.json composer.lock symfony.lock \
             su746574@access-5021721738.webspace-host.com:/home/www/public/Dulogix-app/
-      - name: Validate and clear production cache
+      - name: Run production migrations and validate schema
         run: |
           ssh -i ~/.ssh/dulogix_ionos -o BatchMode=yes -o StrictHostKeyChecking=yes \
             su746574@access-5021721738.webspace-host.com \
-            'cd /home/www/public/Dulogix-app && /usr/bin/php8.5 bin/console cache:clear --env=prod --no-debug && /usr/bin/php8.5 bin/console doctrine:schema:validate --skip-sync --env=prod'
-      # Production migrations deliberately require separate reconciliation first.
+            'set -e; cd /home/www/public/Dulogix-app; /usr/bin/php8.5 bin/console doctrine:migrations:migrate --env=prod --no-debug --no-interaction; /usr/bin/php8.5 bin/console doctrine:schema:validate --env=prod --no-debug; /usr/bin/php8.5 bin/console cache:clear --env=prod --no-debug'
