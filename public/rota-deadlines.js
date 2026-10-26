@@ -6,6 +6,9 @@ const fmt=s=>new Date(s).toLocaleString('en-GB',{weekday:'short',day:'numeric',m
 const names={broadcast:'Initial availability broadcast',outstanding:'Final availability broadcast',availability:'Driver availability deadline',completion:'Complete next week’s rota',distribution:'Send individual rota cards'};
 const order=['broadcast','outstanding','availability','completion','distribution'];
 let data;
+let loadSequence=0;
+const selectedWeek=()=>monday().toISOString().slice(0,10);
+window.addEventListener('rota-week-changed',()=>load());
 const record=key=>key==='broadcast'?data.broadcastSent:key==='outstanding'?data.followupSent:data.checks?.[key];
 function render(){
  const now=Date.now(),pending=data.outstanding.length+data.partial.length;
@@ -26,7 +29,7 @@ function render(){
   const broadcast=key==='broadcast'||key==='outstanding';
   const early=Date.now()<new Date(data.deadlines[key].at).getTime();
   const endpoint=broadcast?'/api/rota/deadlines/broadcast-sent':'/api/rota/deadlines/check';
-  const body=new URLSearchParams(broadcast?{stage:key,checked:checked?'1':'0'}:{action:key,checked:checked?'1':'0'});
+  const body=new URLSearchParams(broadcast?{stage:key,checked:checked?'1':'0',week:data.week}:{action:key,checked:checked?'1':'0',week:data.week});
   try{
    const r=await fetch(endpoint,{method:'POST',credentials:'same-origin',headers:{'X-CSRF-Token':document.querySelector('meta[name="rota-csrf"]').content,'Content-Type':'application/x-www-form-urlencoded'},body});
    if(!r.ok){const e=await r.json().catch(()=>({}));throw Error(e.error||'Could not save');}
@@ -41,6 +44,6 @@ function render(){
   catch(e){const area=document.createElement('textarea');area.value=content;panel.append(area);area.select();alert('Copy the selected message.');}
  });
 }
-async function load(){try{const r=await fetch('/api/rota/deadlines',{credentials:'same-origin',cache:'no-store'});if(!r.ok)throw Error('HTTP '+r.status);data=await r.json();render();}catch(e){panel.innerHTML='<h2>Weekly actions</h2><p>Could not load actions. Please refresh.</p>';}}
+async function load(){const seq=++loadSequence;const week=selectedWeek();panel.innerHTML='<strong>Weekly actions</strong><p>Loading selected week…</p>';try{const r=await fetch('/api/rota/deadlines?week='+encodeURIComponent(week),{credentials:'same-origin',cache:'no-store'});if(!r.ok)throw Error('HTTP '+r.status);const result=await r.json();if(seq!==loadSequence||week!==selectedWeek())return;data=result;render();}catch(e){if(seq===loadSequence)panel.innerHTML='<h2>Weekly actions</h2><p>Could not load actions. Please refresh.</p>';}}
 load();setInterval(load,120000);
 })();

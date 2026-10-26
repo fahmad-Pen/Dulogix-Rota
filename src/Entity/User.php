@@ -8,7 +8,6 @@ use Symfony\Component\Security\Core\User\UserInterface;
 
 #[ORM\Entity]
 #[ORM\Table(name: 'app_user')]
-#[ORM\UniqueConstraint(name: 'uniq_user_email', columns: ['email'])]
 class User implements UserInterface, PasswordAuthenticatedUserInterface
 {
     #[ORM\Id]
@@ -53,7 +52,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     private string $displayName = '';
 
     public function getDriverType(): string { return $this->driverType; }
-    public function setDriverType(string $type): self { if (!in_array($type, ['MANAGER', 'DRIVER', 'JUMPER'], true)) throw new \InvalidArgumentException('Invalid type'); $this->driverType = $type; return $this; }
+    public function setDriverType(string $type): self { if (!in_array($type, ['NONE', 'DRIVER', 'JUMPER'], true)) throw new \InvalidArgumentException('Invalid type'); $this->driverType = $type; return $this; }
     public function getId(): ?int { return $this->id; }
     public function getEmail(): string { return $this->email; }
     public function setEmail(string $email): self { $this->email = mb_strtolower(trim($email)); return $this; }

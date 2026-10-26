@@ -14,7 +14,7 @@ final class SecurityController extends AbstractController
     public function login(AuthenticationUtils $authenticationUtils, CsrfTokenManagerInterface $csrfManager): Response
     {
         if ($this->getUser()) {
-            return $this->redirectToRoute($this->isGranted('ROLE_OPERATIONS') ? 'app_home' : ($this->isGranted('ROLE_DRIVER') ? 'driver_availability' : 'account_profile'));
+            return $this->redirectToRoute(SectionAccess::allowed($this->getUser(), 'rota') ? 'app_home' : (SectionAccess::allowed($this->getUser(), 'vehicle') ? 'vehicle_dashboard' : ($this->isGranted('ROLE_DRIVER') ? 'driver_availability' : 'account_profile')));
         }
         $error = $authenticationUtils->getLastAuthenticationError();
         $email = htmlspecialchars($authenticationUtils->getLastUsername(), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');

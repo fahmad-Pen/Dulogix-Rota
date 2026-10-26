@@ -2,7 +2,7 @@
 namespace App\Controller;
 use App\Entity\User;
 final class SectionAccess {
-    public const SECTIONS = ['rota' => 'Rota Management'];
+    public const SECTIONS = ['rota' => 'Rota Management', 'vehicle' => 'Vehicle Management'];
     public static function allowed(?User $user, string $section): bool {
         if (!$user || !isset(self::SECTIONS[$section])) return false;
         if (in_array('ROLE_ADMIN', $user->getRoles(), true)) return true;
@@ -12,6 +12,7 @@ final class SectionAccess {
         if (!$user) return '';
         $html = '<nav class="du-nav" aria-label="Main navigation">';
         if (self::allowed($user, 'rota')) $html .= '<details class="du-menu"><summary>Rota Management</summary><div class="du-submenu"><a href="/">Weekly rota</a><a href="/admin/users">Drivers</a></div></details>';
+        if (self::allowed($user, 'vehicle')) $html .= '<details class="du-menu"><summary>Vehicle Management</summary><div class="du-submenu"><a href="/vehicles">Vehicle dashboard</a></div></details>';
         if (in_array('ROLE_ADMIN', $user->getRoles(), true)) $html .= '<details class="du-menu"><summary>Settings</summary><div class="du-submenu"><a href="/admin/users">Users</a><a href="/admin/settings">Rota settings</a></div></details>';
         if (in_array('ROLE_DRIVER', $user->getRoles(), true)) $html .= '<a href="/driver/availability">My availability</a>';
         return $html.'<a href="/account">My account</a><a href="/logout">Sign out</a></nav><script>(function(){if(!window.matchMedia("(hover: hover) and (pointer: fine)").matches)return;document.querySelectorAll(".du-menu").forEach(function(menu){menu.addEventListener("mouseenter",function(){menu.open=true;});menu.addEventListener("mouseleave",function(){menu.open=false;});});})();</script>';

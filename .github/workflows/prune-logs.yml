@@ -1,0 +1,24 @@
+name: Prune old application logs
+on:
+  schedule:
+    - cron: '15 3 * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  prune:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure SSH
+        env:
+          SSH_KEY: ${{ secrets.IONOS_SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.IONOS_KNOWN_HOSTS }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/dulogix_ionos
+          chmod 600 ~/.ssh/dulogix_ionos
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+      - name: Prune audit and rotated application logs
+        run: |
+          ssh -i ~/.ssh/dulogix_ionos -o BatchMode=yes -o StrictHostKeyChecking=yes su746574@access-5021721738.webspace-host.com \
+            'cd /home/www/public/Dulogix-app && /usr/bin/php8.5 bin/console app:logs:prune --env=prod --no-debug && find var/log -maxdepth 1 -type f -name "*.log.*" -mtime +92 -delete'
