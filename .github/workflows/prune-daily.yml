@@ -1,0 +1,24 @@
+name: Prune daily shift and operations records
+on:
+  schedule:
+    - cron: '35 3 * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  prune:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure SSH
+        env:
+          SSH_KEY: ${{ secrets.IONOS_SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.IONOS_KNOWN_HOSTS }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/dulogix_ionos
+          chmod 600 ~/.ssh/dulogix_ionos
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+      - name: Delete records older than one calendar month
+        run: |
+          ssh -i ~/.ssh/dulogix_ionos -o BatchMode=yes -o StrictHostKeyChecking=yes su746574@access-5021721738.webspace-host.com \
+            'cd /home/www/public/Dulogix-app && /usr/bin/php8.5 bin/console app:daily:prune --execute --env=prod --no-debug'

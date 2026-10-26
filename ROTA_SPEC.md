@@ -19,3 +19,21 @@ Open: DA Capacity/ECP meanings, allocation codes and weights, cutoff, WhatsApp d
 - Distribution stores only the latest manager confirmation (week, driver, time, manager and allocation fingerprint). **No rota change audit timeline** is created for this feature. Historical unlock audit is separate.
 - WhatsApp desktop opening no longer creates a temporary blank browser tab. A prepared image must still be pasted and sent manually.
 - These changes are local on `develop`, not deployed; end-to-end browser and server checks should be repeated before release.
+
+## Daily Operations Report (local development)
+
+- Main menu **Operations → Operations Report**, with separate manager **Operations** section checkbox in account creation/editing; administrators have access automatically.
+- Date navigation and all active Driver/Jumper accounts. Daily allocation and status read from the weekly rota (blank when unset).
+- Per-driver editable van from Vehicle Management, start time and multiline comments, saved per day.
+- A database uniqueness constraint prevents assigning one van to multiple drivers on the same date; occupied vans are removed from other dropdowns.
+- Local migration `Version20261028120000` creates `operations_daily`; applied to the local database. Not committed or deployed.
+
+- Operations Report compact layout matches the main Dulogix logo/header; comments use a narrow expandable multiline field. Read-only **Ementor** and **Clear Quote** display Yes/No from current driver requirement completion; **Fiscoscore** and **No. of returns** remain placeholders pending source definition.
+
+## Fixed van defaults (local, October 2026)
+
+- Operations Report has a **Fixed** checkbox beside each van. Checking it saves a one-to-one permanent driver–van default in `operations_fixed_van`; unchecking removes the association.
+- Future daily reports show the fixed van by default without generating daily records. A daily van change is an override, not a permanent reassignment; existing daily records take precedence.
+- When the rota status is Sick, Holiday, Annual Leave, Day Off, Off Day, Rest Day or Off Duty, an unsaved fixed van default is released for that date, while the permanent association is retained.
+- One van per driver/date is enforced by the existing `operations_daily` uniqueness index; fixed associations are also unique per van. Default reservations are checked on the server during daily saves.
+- The local migration `Version20261029100000` creates the permanent associations table. Not pushed or deployed.

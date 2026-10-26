@@ -11,7 +11,7 @@ final class RotaController extends \Symfony\Bundle\FrameworkBundle\Controller\Ab
     public function index(\Symfony\Component\Security\Csrf\CsrfTokenManagerInterface $csrfManager): Response
     {
         if (!$this->getUser()) return $this->redirectToRoute('app_login');
-        if (!$this->isGranted('ROLE_OPERATIONS') || !SectionAccess::allowed($this->getUser(), 'rota')) return $this->redirectToRoute($this->isGranted('ROLE_DRIVER') ? 'driver_availability' : 'account_profile');
+        if (!$this->isGranted('ROLE_OPERATIONS') || !SectionAccess::allowed($this->getUser(), 'rota')) return $this->redirectToRoute($this->isGranted('ROLE_DRIVER') ? 'driver_daily_check' : 'account_profile');
         $html = <<<'HTML'
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
