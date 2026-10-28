@@ -15,6 +15,8 @@ final class RotaAvailabilityReviewController extends AbstractController {
   $byDriver=[];$repo=$em->getRepository(AppSetting::class);
   foreach($audits as $a){
    if(!preg_match('/^driver-(\d+)$/',$a->driverKey,$m)||$a->actor->getId()!==(int)$m[1])continue;
+   // An empty previous value means the driver's first submission, not a change.
+   if($a->oldValue === '')continue;
    $byDriver[$a->driverKey][]=$a;
   }
   $result=[];$days=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];

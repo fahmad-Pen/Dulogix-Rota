@@ -14,4 +14,8 @@ class RotaAllocationOption
     public int $sortOrder = 0;
     #[ORM\Column(type: 'boolean')]
     public bool $active = true;
+    #[ORM\Column(name: 'counts_headcount', type: 'boolean', options: ['default' => false])]
+    public bool $countsHeadcount = false;
+    #[ORM\Column(name: 'counts_driving_days', type: 'boolean', options: ['default' => false])]
+    public bool $countsDrivingDays = false;
 }

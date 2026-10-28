@@ -51,16 +51,13 @@ async function open(data){
 }
 copyButton.onclick=async()=>{
  if(!file)return;
- const popup=window.open('about:blank','_blank');
- if(!popup){status.textContent='Allow popups for Dulogix, then try again.';return}
  try{
   if(!navigator.clipboard?.write||!window.ClipboardItem)throw Error('Image clipboard not supported in this browser. Try Chrome or Edge on desktop.');
   await navigator.clipboard.write([new ClipboardItem({'image/png':file})]);
   const number=new URL(target).pathname.split('/').filter(Boolean).pop();
-  popup.close();
   window.location.href='whatsapp://send?phone='+encodeURIComponent(number);
   status.textContent='Image copied. If your browser asks to open WhatsApp, allow it. In the desktop app press Ctrl+V, check the driver and image, then Send. If the app does not open, launch WhatsApp yourself and find the driver.';
- }catch(e){popup.close();status.textContent='Unable to copy image: '+e.message}
+ }catch(e){status.textContent='Unable to copy image: '+e.message}
 };
 mobileDirect.onclick=async()=>{
  if(!file)return;

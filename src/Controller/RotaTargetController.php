@@ -15,11 +15,11 @@ final class RotaTargetController extends AbstractController {
   return $d&&$d->format('Y-m-d')===$week&&$d->format('N')==='1'?$d:null;
  }
  #[Route('',name:'api_rota_targets_save',methods:['POST'])]
- public function save(string $week,Request $request,EntityManagerInterface $em):JsonResponse {
+ public function save(string $week,Request $request,EntityManagerInterface $em,RotaWeekLock $lock):JsonResponse {
   $this->denyAccessUnlessGranted('ROLE_OPERATIONS');
   if(!$this->isCsrfTokenValid('rota_edit',(string)$request->headers->get('X-CSRF-Token')))return $this->json(['error'=>'Session expired; refresh page'],403);
   $date=$this->week($week);if(!$date)return $this->json(['error'=>'Invalid week'],422);
-  if($date<new \DateTimeImmutable('monday this week',new \DateTimeZone('Europe/London')))return $this->json(['error'=>'Historical weeks locked'],423);
+  if(!$lock->canEdit($date,$this->getUser()->getId()))return $this->json(['error'=>'Historical weeks locked'],423);
   try{$data=$request->toArray();}catch(\Throwable){return $this->json(['error'=>'Invalid request'],400);}
   $values=$data['values']??null;$expected=$data['expected']??null;
   if(!is_array($values)||!is_array($expected)||count($values)!==count(self::FIELDS)||count($expected)!==count(self::FIELDS))return $this->json(['error'=>'All planning fields required'],422);
@@ -36,6 +36,7 @@ final class RotaTargetController extends AbstractController {
     if($old!==$expected[$field][$day]){$conn->rollBack();return $this->json(['error'=>'Another manager updated planning. Refresh before saving.'],409);}
     $new=$values[$field][$day];if($old===$new)continue;
     if(!$cell){$cell=new RotaCell();$cell->weekStart=$date;$cell->driverKey='planning';$cell->fieldKey=$field;$cell->dayIndex=$day;}
+    $lock->correction($date,$this->getUser()->getId(),$field.' / day '.$day.': '.$old.' → '.$new);
     $cell->value=$new;$cell->updatedBy=$this->getUser();$cell->updatedAt=new \DateTimeImmutable();$em->persist($cell);
     $changed++;
    }

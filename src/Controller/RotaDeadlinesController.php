@@ -66,8 +66,8 @@ final class RotaDeadlinesController extends AbstractController {
   return new Response('<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>Rota deadlines · Dulogix</title><style>body{font:16px system-ui;background:#f4f7fb;color:#17314e}main{max-width:850px;margin:35px auto;padding:15px}.card{background:white;border:1px solid #dbe3ee;border-radius:12px;padding:22px}.row{display:flex;align-items:center;gap:15px;flex-wrap:wrap;padding:15px 0;border-bottom:1px solid #e5eaf0}.row strong{min-width:220px}.explanation{flex-basis:100%;color:#516780;font-size:13px;line-height:1.5;margin-left:0}.time-preview{display:block;color:#17613f;margin-top:3px}.clock{background:#edf5ff;border-radius:8px;padding:10px 12px;font-size:13px;color:#174a7d}.row{gap:10px}.row strong{min-width:290px}input,select,textarea{padding:9px;border:1px solid #bdcad8;border-radius:6px}textarea{display:block;width:100%;box-sizing:border-box}label{display:block;margin:15px 0}button{background:#174a7d;color:white;border:0;border-radius:7px;padding:12px 20px}a{color:#174a7d}</style></head><body><main><a href="/admin/settings">← Admin Settings</a><h1>Rota deadlines & reminders</h1><p>All days and times are UK local time and refer to the week before the upcoming Monday–Sunday rota.</p>'.($saved?'<p style="color:green">Settings saved.</p>':'').($error?'<p style="color:red">'.$e($error).'</p>':'').'<div class="card">'.$form.'</div></main><script>(function(){const zone="Europe/London",clock=document.getElementById("uk-clock");const format=new Intl.DateTimeFormat("en-GB",{timeZone:zone,weekday:"long",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit",hour12:false});function update(){const now=new Date();clock.textContent="Current UK time: "+format.format(now)+" · Times below apply to the week before the next rota starts.";document.querySelectorAll(".time-preview").forEach(el=>{const row=el.closest(".row"),day=row.querySelector("select").value,time=row.querySelector("input[type=time]").value;el.textContent="Scheduled: "+day+" at "+time+" (UK time)";});}document.querySelectorAll("select,input[type=time]").forEach(el=>el.addEventListener("input",update));update();setInterval(update,60000);})();</script></body></html>');
  }
  #[Route('/api/rota/deadlines',name:'api_rota_deadlines',methods:['GET'])]
- public function status(EntityManagerInterface $em): Response {
-  $this->denyAccessUnlessGranted('ROLE_OPERATIONS');$tz=new \DateTimeZone('Europe/London');$now=new \DateTimeImmutable('now',$tz);$week=$now->modify('monday next week')->setTime(0,0);$config=$this->config($em);
+ public function status(Request $request, EntityManagerInterface $em): Response {
+  $this->denyAccessUnlessGranted('ROLE_OPERATIONS');$tz=new \DateTimeZone('Europe/London');$now=new \DateTimeImmutable('now',$tz);$week=$this->selectedWeek($request, $now);$config=$this->config($em);
   $drivers=array_values(array_filter($em->getRepository(User::class)->findAll(),static fn(User $u)=>in_array('ROLE_DRIVER',$u->getRoles(),true)));
   $cells=$em->getRepository(RotaCell::class)->findBy(['weekStart'=>$week]);
   $counts=[];$alloc=[];$last=[];
@@ -89,14 +89,22 @@ final class RotaDeadlinesController extends AbstractController {
   $checks=[];foreach(['availability','completion','distribution'] as $action){$item=$em->getRepository(AppSetting::class)->find('rota_action_'.$action.'_'.$week->format('Y-m-d'));$checks[$action]=$item?json_decode($item->value,true):null;}
   return $this->json(['week'=>$week->format('Y-m-d'),'deadlines'=>$deadlines,'warningHours'=>(int)$config['warning'],'message'=>$config['message'],'broadcastSent'=>$sent,'followupSent'=>$followupSent,'checks'=>$checks,'canOverride'=>$this->isGranted('ROLE_ADMIN'),'total'=>count($drivers),'submitted'=>$completed,'partial'=>$partial,'outstanding'=>$outstanding,'fullyAllocated'=>$allocated,'availabilityDeadline'=>$availabilityDeadline->format(DATE_ATOM)])->setPrivate()->setMaxAge(0);
  }
+ private function selectedWeek(Request $request, \DateTimeImmutable $now): \DateTimeImmutable {
+  $raw=(string)($request->query->get('week') ?: $request->request->get('week', ''));
+  if($raw==='')return $now->modify('monday next week')->setTime(0,0);
+  $week=\DateTimeImmutable::createFromFormat('!Y-m-d',$raw,new \DateTimeZone('Europe/London'));
+  if(!$week||$week->format('Y-m-d')!==$raw||$week->format('N')!=='1')throw new \Symfony\Component\HttpKernel\Exception\BadRequestHttpException('Invalid rota week');
+  return $week;
+ }
  #[Route('/api/rota/deadlines/check',name:'api_rota_deadline_check',methods:['POST'])]
- public function check(Request $request,EntityManagerInterface $em): Response {
+ public function check(Request $request,EntityManagerInterface $em,RotaWeekLock $lock): Response {
   $this->denyAccessUnlessGranted('ROLE_OPERATIONS');
   if(!$this->isCsrfTokenValid('rota_edit',(string)$request->headers->get('X-CSRF-Token')))throw $this->createAccessDeniedException();
   $action=(string)$request->request->get('action');
   if(!in_array($action,['availability','completion','distribution'],true))return $this->json(['error'=>'Invalid action'],422);
   $now=new \DateTimeImmutable('now',new \DateTimeZone('Europe/London'));
-  $week=$now->modify('monday next week')->format('Y-m-d');
+  $selected=$this->selectedWeek($request,$now);if(!$lock->canEdit($selected,$this->getUser()->getId()))return $this->json(['error'=>'Historical week locked'],423);
+  $week=$selected->format('Y-m-d');
   $key='rota_action_'.$action.'_'.$week;
   $repo=$em->getRepository(AppSetting::class);$setting=$repo->find($key);
   if($request->request->get('checked')==='1'){
@@ -104,13 +112,13 @@ final class RotaDeadlinesController extends AbstractController {
    $setting->value=json_encode(['manager'=>$this->getUser()->getUserIdentifier(),'at'=>$now->format(DATE_ATOM)]);
    $em->persist($setting);
   }elseif($setting){$em->remove($setting);}
-  $em->flush();return $this->json(['ok'=>true]);
+  $em->flush();$lock->correction($selected,$this->getUser()->getId(),'Weekly action '.$action.': '.($request->request->get('checked')==='1'?'checked':'unchecked'));return $this->json(['ok'=>true]);
  }
  #[Route('/api/rota/deadlines/broadcast-sent',name:'api_rota_broadcast_sent',methods:['POST'])]
- public function sent(Request $request,EntityManagerInterface $em): Response {
+ public function sent(Request $request,EntityManagerInterface $em,RotaWeekLock $lock): Response {
   $this->denyAccessUnlessGranted('ROLE_OPERATIONS');
   if(!$this->isCsrfTokenValid('rota_edit',(string)$request->headers->get('X-CSRF-Token')))throw $this->createAccessDeniedException();
-  $tz=new \DateTimeZone('Europe/London');$week=(new \DateTimeImmutable('now',$tz))->modify('monday next week')->format('Y-m-d');
+  $tz=new \DateTimeZone('Europe/London');$selected=$this->selectedWeek($request,new \DateTimeImmutable('now',$tz));if(!$lock->canEdit($selected,$this->getUser()->getId()))return $this->json(['error'=>'Historical week locked'],423);$week=$selected->format('Y-m-d');
   $stage=(string)$request->request->get('stage','broadcast');if(!in_array($stage,['broadcast','outstanding'],true))return $this->json(['error'=>'Invalid reminder stage'],422);
   $now=new \DateTimeImmutable('now',$tz);
   $key=($stage==='broadcast'?'rota_broadcast_sent_':'rota_followup_sent_').$week;
@@ -122,6 +130,6 @@ final class RotaDeadlinesController extends AbstractController {
    $setting->value=json_encode(['manager'=>$this->getUser()->getUserIdentifier(),'at'=>$now->format(DATE_ATOM)]);
    $em->persist($setting);
   }
-  $em->flush();return $this->json(['ok'=>true]);
+  $em->flush();$lock->correction($selected,$this->getUser()->getId(),'Weekly broadcast '.$stage.': '.($request->request->get('checked','1')==='0'?'unmarked':'marked'));return $this->json(['ok'=>true]);
  }
 }

@@ -96,7 +96,10 @@ jobs:
           printf 'APP_ENV=test\nAPP_SECRET=ci-test-only-secret\nDEFAULT_URI="http://localhost"\nDATABASE_URL="mysql://dulogix:dulogix@127.0.0.1:3306/dulogix?serverVersion=11.8.0-MariaDB"\n' > .env
       - name: Execute migrations against disposable database
         run: php bin/console doctrine:migrations:migrate --env=test --no-interaction
-      - name: Validate resulting schema
-        run: php bin/console doctrine:schema:validate --env=test
+      # Several operational tables are intentionally managed by SQL migrations
+      # rather than Doctrine ORM entities. Full schema sync would incorrectly
+      # require dropping those tables; validate mappings and migration status instead.
+      - name: Validate Doctrine mappings
+        run: php bin/console doctrine:schema:validate --skip-sync --env=test
       - name: Confirm no pending migrations
         run: php bin/console doctrine:migrations:up-to-date --env=test
