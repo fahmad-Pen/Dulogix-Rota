@@ -61,32 +61,40 @@ final class VehicleManagementController extends AbstractController
                 }
             }
         }
-        $filter=(string)$request->query->get('type','');
-        if (!in_array($filter,self::TYPES,true)) $filter='';
-        $vehicles=$db->fetchAllAssociative('SELECT registration,vehicle_type FROM vehicle'.($filter!==''?' WHERE vehicle_type = :type':'').' ORDER BY registration', $filter!==''?['type'=>$filter]:[]);
+        $requested=$request->query->all()['type']??[];
+        if (is_string($requested)) $requested=[$requested];
+        if (!is_array($requested)) $requested=[];
+        $filters=array_values(array_intersect(self::TYPES,$requested));
+        $placeholders=implode(',',array_fill(0,count($filters),'?'));
+        $vehicles=$db->fetchAllAssociative('SELECT registration,vehicle_type FROM vehicle'.($filters?' WHERE vehicle_type IN ('.$placeholders.')':'').' ORDER BY registration',$filters);
         $totalVehicles=(int)$db->fetchOne('SELECT COUNT(*) FROM vehicle');
         $nav=SectionAccess::navigation($this->getUser());
         $token=$this->esc($this->container->get('security.csrf.token_manager')->getToken('vehicle_manage')->getValue());
-        $options='<option value="">All vehicle types</option>';
+        $filterOptions='';
         $addOptions='';
         foreach(self::TYPES as $type) {
-            $options.='<option value="'.$type.'"'.($filter===$type?' selected':'').'>'.$type.'</option>';
+            $class=strtolower($type);
+            $filterOptions.='<label class="type-filter '.$class.'"><input type="checkbox" name="type[]" value="'.$type.'"'.(in_array($type,$filters,true)?' checked':'').'>'.$type.'</label>';
             $addOptions.='<option value="'.$type.'">'.$type.'</option>';
         }
+        $exportQuery=$filters?'?'.http_build_query(['type'=>$filters]):'';
         $rows='';
         foreach($vehicles as $index=>$vehicle) $rows.='<tr><td>'.($index+1).'</td><td>'.$this->esc($vehicle['registration']).'</td><td>'.$this->esc($vehicle['vehicle_type']).'</td></tr>';
         if (!$rows) $rows='<tr><td colspan="3">No vehicles found.</td></tr>';
         $notice=$message!==''?'<p class="notice">'.$this->esc($message).'</p>':($request->query->has('saved')?'<p class="notice">Vehicle added.</p>':'');
-        $html='<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Vehicle Management · Dulogix</title>'.SectionAccess::CSS.'<style>body{margin:0;background:#f4f7fb;color:#17314e;font:15px system-ui,sans-serif}header{background:#152d49;color:white;padding:18px 28px}main{max-width:1150px;margin:30px auto;padding:0 18px}.card{background:#fff;border:1px solid #dbe3ee;border-radius:10px;padding:24px;margin-bottom:18px}h1{margin-top:0}.row{display:flex;align-items:end;flex-wrap:wrap;gap:14px}.row label{display:grid;gap:6px}input,select,button,.button{padding:10px 12px;border:1px solid #c5d3e3;border-radius:6px;font:inherit}button,.button{background:#1a4c77;color:#fff;cursor:pointer;text-decoration:none}table{width:100%;border-collapse:collapse;margin-top:18px}th,td{padding:12px;border-bottom:1px solid #e0e7ef;text-align:left}th{background:#eef3f9}.notice{padding:12px;background:#e6f3ff;border-radius:6px}.muted{color:#63758b}</style></head><body><header><strong style="margin-right:28px">Dulogix</strong>'.$nav.'</header><main><h1>Vehicle Management</h1>'.$notice.'<div class="card"><h2>Add vehicle</h2><form method="post" class="row"><input type="hidden" name="_token" value="'.$token.'"><input type="hidden" name="action" value="add"><label>Vehicle Reg<input name="registration" maxlength="24" required placeholder="AB12 CDE"></label><label>Vehicle Type<select name="vehicle_type">'.$addOptions.'</select></label><button>Add vehicle</button></form></div><div class="card"><h2>Vehicle register</h2><div class="row"><form method="get" class="row"><label>Filter by Vehicle Type<select name="type" onchange="this.form.submit()">'.$options.'</select></label></form><a class="button" href="/vehicles/export'.($filter!==''?'?type='.rawurlencode($filter):'').'">Export Excel (.xlsx)</a></div><p class="muted"><strong>Total vehicles: '.$totalVehicles.'</strong> &nbsp;|&nbsp; <strong>Showing: '.count($vehicles).'</strong>'.($filter!==''?' ('.$this->esc($filter).')':'').'</p><table><thead><tr><th>#</th><th>Vehicle Reg</th><th>Vehicle Type</th></tr></thead><tbody>'.$rows.'</tbody></table></div><div class="card"><h2>Import vehicles from Excel</h2><p class="muted">Upload an .xlsx file with two columns: Vehicle Reg and Vehicle Type (Diesel, EV, Petrol or Hybrid). Existing registrations are skipped.</p><form method="post" enctype="multipart/form-data" class="row"><input type="hidden" name="_token" value="'.$token.'"><input type="hidden" name="action" value="import"><input type="file" name="file" accept=".xlsx" required><button>Import Excel</button></form></div></main></body></html>';
+        $html='<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Vehicle Management · Dulogix</title>'.SectionAccess::CSS.'<style>body{margin:0;background:#f4f7fb;color:#17314e;font:15px system-ui,sans-serif}header{background:#152d49;color:white;padding:18px 28px}main{max-width:1150px;margin:30px auto;padding:0 18px}.card{background:#fff;border:1px solid #dbe3ee;border-radius:10px;padding:24px;margin-bottom:18px}h1{margin-top:0}.row{display:flex;align-items:end;flex-wrap:wrap;gap:14px}.row label{display:grid;gap:6px}input,select,button,.button{padding:10px 12px;border:1px solid #c5d3e3;border-radius:6px;font:inherit}button,.button{background:#1a4c77;color:#fff;cursor:pointer;text-decoration:none}table{width:100%;border-collapse:collapse;margin-top:18px}th,td{padding:12px;border-bottom:1px solid #e0e7ef;text-align:left}th{background:#eef3f9}.notice{padding:12px;background:#e6f3ff;border-radius:6px}.muted{color:#63758b}.type-filters{display:flex;flex-wrap:wrap;gap:10px;align-items:center}.type-filter{display:inline-flex;align-items:center;gap:9px;padding:10px 16px;border-radius:8px;font-weight:700;cursor:pointer}.type-filter input{margin:0;accent-color:#fff;width:18px;height:18px}.type-filter.ev{background:#168342;color:#fff}.type-filter.diesel{background:#181818;color:#fff}.type-filter.petrol{background:#b9e9ac;color:#153b22}.type-filter.hybrid{background:#6945aa;color:#fff}</style></head><body><header><strong style="margin-right:28px">Dulogix</strong>'.$nav.'</header><main><h1>Vehicle Management</h1>'.$notice.'<div class="card"><h2>Add vehicle</h2><form method="post" class="row"><input type="hidden" name="_token" value="'.$token.'"><input type="hidden" name="action" value="add"><label>Vehicle Reg<input name="registration" maxlength="24" required placeholder="AB12 CDE"></label><label>Vehicle Type<select name="vehicle_type">'.$addOptions.'</select></label><button>Add vehicle</button></form></div><div class="card"><h2>Vehicle register</h2><form method="get" class="type-filters" id="vehicle-type-filters"><strong>Filter by Vehicle Type:</strong>'.$filterOptions.'<a href="/vehicles" class="button">Show all</a></form><script>document.querySelectorAll(\'#vehicle-type-filters input[type=checkbox]\').forEach(function(box){box.addEventListener(\'change\',function(){document.getElementById(\'vehicle-type-filters\').requestSubmit();});});</script><label for="vehicle-search">Search by vehicle registration</label><input id="vehicle-search" type="search" placeholder="Enter registration…" oninput="document.querySelectorAll(\'#vehicle-table tbody tr\').forEach(row=>row.hidden=!row.cells[1].textContent.toLowerCase().includes(this.value.toLowerCase().trim()))"><p class="muted"><strong>Total vehicles: '.$totalVehicles.'</strong> &nbsp;|&nbsp; <strong>Showing: '.count($vehicles).'</strong>'.($filters?' ('.$this->esc(implode(', ',$filters)).')':'').'</p><table id="vehicle-table"><thead><tr><th>#</th><th>Vehicle Reg</th><th>Vehicle Type</th></tr></thead><tbody>'.$rows.'</tbody></table></div><div class="card"><h2>Import / Export vehicles</h2><p class="muted">Upload an .xlsx file with two columns: Vehicle Reg and Vehicle Type (Diesel, EV, Petrol or Hybrid). Existing registrations are skipped.</p><form method="post" enctype="multipart/form-data" class="row"><input type="hidden" name="_token" value="'.$token.'"><input type="hidden" name="action" value="import"><input type="file" name="file" accept=".xlsx" required><button>Import Excel</button></form><p><a class="button" href="/vehicles/export'.$exportQuery.'">Export Excel (.xlsx)</a></p></div></main></body></html>';
         return new Response($html);
     }
 
     #[Route('/vehicles/export', name: 'vehicle_export', methods: ['GET'])]
     public function export(Request $request, Connection $db): Response {
         $this->access();
-        $filter=(string)$request->query->get('type','');
-        if (!in_array($filter,self::TYPES,true)) $filter='';
-        $rows=$db->fetchAllAssociative('SELECT registration,vehicle_type FROM vehicle'.($filter!==''?' WHERE vehicle_type = :type':'').' ORDER BY registration',$filter!==''?['type'=>$filter]:[]);
+        $requested=$request->query->all()['type']??[];
+        if (is_string($requested)) $requested=[$requested];
+        if (!is_array($requested)) $requested=[];
+        $filters=array_values(array_intersect(self::TYPES,$requested));
+        $placeholders=implode(',',array_fill(0,count($filters),'?'));
+        $rows=$db->fetchAllAssociative('SELECT registration,vehicle_type FROM vehicle'.($filters?' WHERE vehicle_type IN ('.$placeholders.')':'').' ORDER BY registration',$filters);
         $values=[['Vehicle Reg','Vehicle Type']];
         foreach($rows as $row) $values[]=[$row['registration'],$row['vehicle_type']];
         $file=tempnam(sys_get_temp_dir(),'vehicle_xlsx_');

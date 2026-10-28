@@ -24,6 +24,10 @@
 - Primary branches: `develop` (development) and `main` (production). Merge tested changes through a manually approved pull request from `develop` into `main`.
 - Follow Conventional Commits for all new commits and PR titles: `type(scope): concise imperative description` (scope optional). Types include `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `ci`, `build`, and `perf`.
 - Examples: `feat(rota): add weekly availability`, `fix(auth): correct login redirect`, `ci(deploy): protect production settings`.
+- **Mandatory pre-commit check:** Before every commit, verify the proposed subject follows `type(scope): imperative description` with a valid type, a meaningful scope, a colon followed by one space, and no checkpoint-only or free-form subject. Use `feat` (not `fiat`) for features; use `docs` for documentation-only changes.
+- **Mandatory post-commit check:** Inspect `git log -1 --format=%s` and confirm the subject matches the convention before pushing. If the subject is wrong, amend it before the first push; do not rewrite already-pushed history without explicit permission.
+- PR titles must also use Conventional Commits. For PRs covering several features, select the dominant type and a broad scope; provide a separate descriptive PR body.
+- Do not commit, push, amend, force-push, merge, or deploy without explicit user approval for the relevant action. Merging into `main` is a separate approval from committing/pushing `develop`.
 - Use descriptive short-lived branch names such as `feat/driver-availability` or `fix/login-redirect`. Mark breaking changes with `!` or a `BREAKING CHANGE:` footer.
 - Use GitHub with SSH authentication; create a project-appropriate SSH key without exposing the private key.
 - Deploy `main` to IONOS using GitHub Actions after the approved pull request is merged; never deploy from `master`.

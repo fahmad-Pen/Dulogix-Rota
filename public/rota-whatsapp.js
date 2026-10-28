@@ -29,6 +29,7 @@ for(const key of selected)if(!visible.has(key))selected.delete(key);
 $('wa-count').textContent=selected.size+' selected';
 const table=$('drivers');const heading=table.querySelector('thead th:first-child');if(heading&&!heading.querySelector('#wa-select-all')){const all=document.createElement('input');all.type='checkbox';all.id='wa-select-all';all.setAttribute('aria-label','Select all drivers');all.title='Select all drivers';all.style.marginRight='9px';heading.prepend(all);}const all=$('wa-select-all');if(all){all.checked=drivers.length>0&&drivers.every(d=>selected.has(d.key));all.indeterminate=selected.size>0&&!all.checked;}
 const counts={sent:0,'not-sent':0,resend:0};drivers.forEach(d=>{counts[distribution[d.key]?.status||'not-sent']++;});summary.textContent='Rota distribution: 🟢 '+counts.sent+' sent | 🔴 '+counts['not-sent']+' not sent | 🟠 '+counts.resend+' resend required';
+document.querySelectorAll('[data-rota-distribution]').forEach(badge=>{const info=distribution[badge.dataset.rotaDistribution];badge.textContent=info?.status==='sent'?'🟢 Rota sent':info?.status==='resend'?'🟠 Resend required':info?.status==='not-sent'?'🔴 Rota not sent':'⚪ Rota status pending';badge.title=info?.at?'Confirmed by '+(info.by||'manager')+' on '+new Date(info.at).toLocaleString('en-GB'):'No sending confirmation';});
 const rows=document.querySelectorAll('#drivers tbody tr.avail');
 rows.forEach(row=>{
  const name=row.querySelector('td:first-child b')?.textContent;

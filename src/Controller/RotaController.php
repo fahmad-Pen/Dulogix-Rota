@@ -76,7 +76,7 @@ document.querySelector('#drivers tbody').innerHTML=drivers.filter(d=>d.name.toLo
  document.addEventListener('scroll',schedule,{passive:true,capture:true});
  document.addEventListener('DOMContentLoaded',schedule);
 })();
-</script><script src="/rota-demo.js?v=27" defer></script><script src="/rota-share.js?v=6" defer></script><script src="/rota-whatsapp.js?v=12" defer></script><script src="/rota-deadlines.js?v=9" defer></script><script src="/rota-availability-reviews.js?v=6" defer></script></body></html>
+</script><script src="/rota-demo.js?v=37" defer></script><script src="/rota-share.js?v=6" defer></script><script src="/rota-whatsapp.js?v=13" defer></script><script src="/rota-deadlines.js?v=9" defer></script><script src="/rota-availability-reviews.js?v=6" defer></script></body></html>
 HTML;
         $token = htmlspecialchars($csrfManager->getToken('rota_edit')->getValue(), ENT_QUOTES, 'UTF-8');
         if (!$this->isGranted('ROLE_ADMIN')) { $html = str_replace('<a href="/admin/settings" style="color:#fff;margin-right:14px;font-size:12px">⚙ Admin Settings</a><a href="/driver/availability?preview=1" style="color:#fff;margin-right:14px;font-size:12px">Driver preview</a>', '', $html); }
