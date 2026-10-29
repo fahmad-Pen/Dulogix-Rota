@@ -13,7 +13,11 @@ allLabel.append(all,document.createTextNode('Select all displayed'));
 const clear=document.createElement('button');clear.type='button';clear.className='ops-select-all';clear.textContent='Clear selection';
 const selected=document.createElement('button');selected.type='button';selected.className='ops-print-selected';selected.textContent='Print selected / PDF (A4)';
 const count=document.createElement('span');count.className='ops-select-count';count.setAttribute('aria-live','polite');
-toolbar.append(allLabel,clear,selected,count);
+const exportAll=document.createElement('button');exportAll.type='button';exportAll.textContent='Download Excel (all)';
+const exportSelected=document.createElement('button');exportSelected.type='button';exportSelected.textContent='Download Excel (selected)';
+toolbar.append(allLabel,clear,selected,exportAll,exportSelected,count);
+printButton.insertAdjacentElement('afterend',exportAll);
+exportAll.style.marginLeft='8px';
 const bar=printButton.closest('.datebar');bar?.after(toolbar);
 const checkboxes=rows.map(row=>{
  const label=document.createElement('label');label.className='ops-print-choice';
@@ -29,10 +33,53 @@ function refresh(){
  all.indeterminate=shown.some(item=>item.box.checked)&&!all.checked;
  count.textContent=chosen.length+' selected';
  selected.disabled=chosen.length===0;
+ exportSelected.disabled=chosen.length===0;
 }
 all.addEventListener('change',()=>{visible().forEach(({row,box})=>{box.checked=all.checked;row.classList.toggle('ops-print-picked',box.checked)});refresh()});
 clear.addEventListener('click',()=>{checkboxes.forEach(({row,box})=>{box.checked=false;row.classList.remove('ops-print-picked')});refresh()});
 selected.addEventListener('click',()=>{if(!checkboxes.some(({box})=>box.checked))return;document.body.classList.add('ops-print-only-selected');document.activeElement.blur();window.print()});
+function cellValue(cell){
+ const clone=cell.cloneNode(true);
+ clone.querySelectorAll('.ops-print-choice,button,script,style,[hidden],[aria-hidden="true"],input[type="hidden"],svg').forEach(el=>el.remove());
+ const originals=[...cell.querySelectorAll('select,input,textarea')].filter(el=>!el.closest('.ops-print-choice'));
+ clone.querySelectorAll('select,input,textarea').forEach((el,i)=>{
+  const original=originals[i];let value='';
+  if(original?.tagName==='SELECT')value=original.selectedOptions[0]?.textContent||'';
+  else if(original?.type==='checkbox')value=original.checked?'Yes':'No';
+  else value=original?.value||'';
+  el.replaceWith(document.createTextNode(value));
+ });
+ clone.querySelectorAll('*').forEach(el=>{if(el.getAttribute('style')?.match(/display\s*:\s*none|visibility\s*:\s*hidden/i))el.remove()});
+ return clone.textContent.replace(/\s+/g,' ').trim();
+}
+async function downloadExcel(onlySelected){
+ const chosen=checkboxes.filter(({row,box})=>!row.hidden&&(!onlySelected||box.checked));
+ if(!chosen.length)return;
+ const headings=['Driver','Allocation','Van','Fixed','Start time','Rota status','Comments','Ementor','Clear Quote','FISCO score','Number of returns'];
+ const rowsToExport=[headings,...chosen.map(({row})=>{
+  const form=row.querySelector('form.entry');
+  const values=[...form.querySelectorAll('.flag,.pending')].map(el=>el.textContent.trim());
+  return [
+   row.cells[0].querySelector('strong')?.textContent.trim()||'',
+   row.dataset.allocation||'',
+   form.elements.van.selectedOptions[0]?.textContent.trim()||'',
+   form.elements.fixed.checked?'Yes':'No',
+   form.elements.start_time.value||'',
+   form.querySelector('.status-pill')?.textContent.trim()||'',
+   form.elements.comments.value||'',
+   ...values
+  ];
+ })];
+ if(!window.dulogixSaveXlsx){
+  await new Promise((resolve,reject)=>{
+   const script=document.createElement('script');script.src='/operations-xlsx.js';
+   script.onload=resolve;script.onerror=reject;document.head.append(script);
+  });
+ }
+ window.dulogixSaveXlsx(rowsToExport,'Dulogix-Operations-'+(onlySelected?'Selected-':'')+new Date().toISOString().slice(0,10)+'.xlsx');
+}
+exportAll.addEventListener('click',()=>downloadExcel(false));
+exportSelected.addEventListener('click',()=>downloadExcel(true));
 window.addEventListener('afterprint',()=>document.body.classList.remove('ops-print-only-selected'));
 printButton.addEventListener('click',()=>document.body.classList.remove('ops-print-only-selected'),true);
 new MutationObserver(refresh).observe(table.tBodies[0],{subtree:true,attributes:true,attributeFilter:['hidden']});
