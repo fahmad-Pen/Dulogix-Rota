@@ -8,6 +8,7 @@ permissions:
 jobs:
   prune:
     runs-on: ubuntu-latest
+    environment: Production
     steps:
       - name: Configure SSH
         env:
