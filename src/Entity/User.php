@@ -24,6 +24,12 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(length: 40, nullable: true)]
     private ?string $phone = null;
 
+    #[ORM\Column(length: 40, nullable: true, unique: true)]
+    private ?string $transporterId = null;
+
+    public function getTransporterId(): ?string { return $this->transporterId; }
+    public function setTransporterId(?string $id): self { $this->transporterId = $id === null || trim($id) === '' ? null : strtoupper(trim($id)); return $this; }
+
     #[ORM\Column(length: 16, options: ['default' => 'DRIVER'])]
     private string $driverType = 'DRIVER';
 
