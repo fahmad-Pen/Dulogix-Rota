@@ -130,9 +130,11 @@ final class Version20261031130000 extends AbstractMigration
             ['jayshreedulo', 'Jayshree Parbat Keshwala', 'A2RE1F85TFZOL'],
         ];
         $connection = $this->connection;
-        $connection->beginTransaction();
-        try {
-            foreach ($assignments as [$username, $name, $transporterId]) {
+        // CI uses an empty disposable database; there are no existing accounts to backfill.
+        if ((int) $connection->fetchOne('SELECT COUNT(*) FROM app_user') === 0) {
+            return;
+        }
+        foreach ($assignments as [$username, $name, $transporterId]) {
                 $row = $connection->fetchAssociative('SELECT id, display_name, roles, transporter_id FROM app_user WHERE username = ?', [$username]);
                 if (!$row || $row['display_name'] !== $name || !in_array('ROLE_DRIVER', json_decode((string)$row['roles'], true) ?: [], true)) {
                     throw new \RuntimeException('Driver identity mismatch for username: '.$username);
@@ -145,11 +147,6 @@ final class Version20261031130000 extends AbstractMigration
                 }
                 $connection->executeStatement('UPDATE app_user SET transporter_id = ? WHERE id = ? AND transporter_id IS NULL', [$transporterId, $row['id']]);
             }
-            $connection->commit();
-        } catch (\Throwable $e) {
-            $connection->rollBack();
-            throw $e;
-        }
     }
 
     public function down(Schema $schema): void
