@@ -22,7 +22,8 @@ document.head.append(composerStyle);
 const $=id=>document.getElementById(id);
 const driverId=d=>Number(d.key.slice(7));
 const week=()=>monday().toISOString().slice(0,10);
-const currentWeek=()=>offset===0;
+// Match the server's rota lock: the immediately previous week remains open.
+const currentWeek=()=>monday().getTime()+21*86400000>ukToday.getTime();
 function refresh(){
 const visible=new Set(drivers.map(d=>d.key));
 for(const key of selected)if(!visible.has(key))selected.delete(key);
@@ -61,8 +62,8 @@ $('wa-none').onclick=()=>{selected.clear();refresh()};
 document.querySelector('#drivers').addEventListener('change',e=>{if(e.target.id!=='wa-select-all')return;if(e.target.checked)drivers.forEach(d=>selected.add(d.key));else selected.clear();refresh();});
 document.querySelector('#drivers').addEventListener('change',e=>{const key=e.target.dataset.waSelect;if(!key)return;e.target.checked?selected.add(key):selected.delete(key);refresh()});
 function start(type,targets){
- if(!targets.length)return alert('Select at least one driver.');
- if(type==='rota'&&!currentWeek())return alert('Weekly rota messages are only for the coming week.');
+ if(!targets.length){alert('Select at least one driver.');return false;}
+ if(type==='rota'&&!currentWeek()){alert('This rota week is locked. The previous week and later weeks are available.');return false;}
  const content=$('wa-message').value.trim();
  if(type==='general'&&!content)return alert('Write a general message first.');
  if(type==='general'&&content.length>2000)return alert('Message is too long.');
@@ -71,6 +72,7 @@ function start(type,targets){
  $('wa-progress').textContent=queue.length+' draft(s) ready. Send each manually.';
  $('wa-next').hidden=false;
  $('wa-next').textContent='Open WhatsApp for next driver ('+queue.length+' remaining)';
+ return true;
 }
 async function next(){
  if(!queue.length){$('wa-next').hidden=true;return;}
@@ -97,7 +99,7 @@ async function next(){
 $('wa-next').onclick=next;
 $('wa-confirm').onclick=async()=>{if(!opened)return;try{if(kind==='rota')await confirmRota(opened);}catch(e){alert(e.message);return;}const name=opened.name;queue.shift();completed++;opened=null;$('wa-confirm').hidden=true;$('wa-next').hidden=!queue.length;$('wa-next').textContent='Open WhatsApp for next driver ('+queue.length+' remaining)';$('wa-progress').textContent='Marked as sent by manager for '+name+'. '+completed+' of '+total+' processed.'+(queue.length?' Open the next draft.':' All recipients processed.');};
 $('wa-general-selected').onclick=()=>start('general',drivers.filter(d=>selected.has(d.key)));
-$('wa-rota-selected').onclick=()=>{start('rota',drivers.filter(d=>selected.has(d.key)));if(queue.length)next();};
+$('wa-rota-selected').onclick=()=>{if(start('rota',drivers.filter(d=>selected.has(d.key))))next();};
 const quickContainer=document.createElement('div');quickContainer.className='wa-quick-messages';quickContainer.style.cssText='display:flex;flex-wrap:wrap;gap:8px;margin:12px 0';panel.querySelector('.wa-actions').after(quickContainer);async function loadQuickMessages(){try{const response=await fetch('/api/whatsapp/quick-messages',{credentials:'same-origin',cache:'no-store'});if(!response.ok)return;const templates=await response.json();quickContainer.replaceChildren();for(const template of templates){const button=document.createElement('button');button.type='button';button.textContent='📋 '+template.label;button.title='Copy predefined message';button.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(template.message);$('wa-progress').textContent='Copied '+template.label+'. Paste into WhatsApp to send manually.'}catch(e){$('wa-message').value=template.message;$('wa-message').focus();$('wa-message').select();$('wa-progress').textContent='Clipboard unavailable. Message selected in composer; copy it manually.'}});quickContainer.append(button)}}catch(e){}}loadQuickMessages();
 $('wa-general-all').textContent='Copy for WhatsApp Broadcast List';
 $('wa-general-all').onclick=()=>{const m=$('wa-message').value.trim();if(!m)return alert('Enter a message');navigator.clipboard.writeText(m).then(()=>$('wa-progress').textContent='Copied for your existing broadcast list. Paste and send manually.').catch(()=>{$('wa-message').focus();$('wa-message').select();$('wa-progress').textContent='Clipboard unavailable. Copy the selected text and paste into your broadcast list.';});};
@@ -105,7 +107,7 @@ document.querySelector('#drivers').addEventListener('click',e=>{
  const general=e.target.closest('[data-wa-general]');
  const rota=e.target.closest('[data-wa-rota]');
  if(general){const d=drivers.find(x=>x.key===general.dataset.waGeneral);if(d)start('general',[d]);}
- if(rota){const d=drivers.find(x=>x.key===rota.dataset.waRota);if(d){start('rota',[d]);next();}}
+ if(rota){const d=drivers.find(x=>x.key===rota.dataset.waRota);if(d&&start('rota',[d]))next();}
 });
 refresh();loadDistribution();
 })();
