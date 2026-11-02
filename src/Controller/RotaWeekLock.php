@@ -9,7 +9,9 @@ final class RotaWeekLock
     public function historical(\DateTimeImmutable $week): bool
     {
         $tz = new \DateTimeZone('Europe/London');
-        return new \DateTimeImmutable('now', $tz) >= $week->setTimezone($tz)->modify('+14 days')->setTime(0, 0);
+        // Keep the immediately previous rota week editable; lock only once
+        // the following week has also finished (three Mondays later).
+        return new \DateTimeImmutable('now', $tz) >= $week->setTimezone($tz)->modify('+21 days')->setTime(0, 0);
     }
     public function session(\DateTimeImmutable $week): ?array
     {
