@@ -14,6 +14,79 @@ extraStyle.textContent = 'td input[type=number]{width:74px;text-align:center}td 
 extraStyle.textContent += '#drivers thead th{position:sticky;top:0;z-index:12;background:#e8eef6;box-shadow:0 2px 0 #9fb4cc}#drivers thead th:first-child{left:0;z-index:14}#drivers tbody td:first-child{z-index:2}#drivers{border-collapse:separate;border-spacing:0}#drivers-scroll{overflow:visible}@media(max-width:1100px){#drivers-scroll{overflow-x:auto}#drivers thead th{position:sticky;top:0}}@media print{#drivers thead th{position:static!important}#drivers-scroll{overflow:visible!important}}';
 document.querySelector('#drivers').parentElement.id='drivers-scroll';
 document.head.append(extraStyle);
+// Show the two live surplus figures within each existing weekday heading.
+// Do not change the original sticky table header or its column layout.
+{
+ const syncSurplus=()=>{
+  // The server renders an empty thead; weekday cells appear only after render().
+  // Query the current cells each time, rather than capturing an empty list.
+  const weekdayHeaders=[...document.querySelectorAll('#drivers thead tr:first-child th')].slice(2,9);
+  const rows=[...document.querySelectorAll('#summary tbody tr')].filter(tr=>/^(Availability|Allocation) surplus \/ shortfall$/i.test(tr.cells[0]?.textContent.trim()||''));
+  weekdayHeaders.forEach((th,day)=>{
+   let figures=th.querySelector('.rota-day-surplus');
+   if(!figures){
+    const layout=document.createElement('span');layout.className='rota-day-heading-layout';
+    const date=document.createElement('span');date.className='rota-day-heading-date';
+    while(th.firstChild)date.append(th.firstChild);
+    figures=document.createElement('span');figures.className='rota-day-surplus';
+    layout.append(date,figures);th.append(layout);
+   }
+   figures.replaceChildren();
+   if(rows.length!==2)return;
+   rows.forEach((row,index)=>{
+    const source=row.cells[day+1];
+    const value=document.createElement('span');
+    value.className='rota-day-surplus-value';
+    value.textContent=source?.textContent.trim()||'0';
+    value.title=index===0?'Availability surplus / shortfall':'Allocation surplus / shortfall';
+    if(source?.classList.contains('short')||Number(value.textContent)<0)value.classList.add('short');
+    figures.append(value);
+   });
+  });
+ };
+ const summaryBody=document.querySelector('#summary tbody');
+ if(summaryBody)new MutationObserver(syncSurplus).observe(summaryBody,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:['class']});
+ // render() replaces the entire driver thead on week changes and filters.
+ // Reapply the figures whenever that header is rebuilt.
+ const driverHead=document.querySelector('#drivers thead');
+ if(driverHead)new MutationObserver(syncSurplus).observe(driverHead,{childList:true});
+ syncSurplus();
+ extraStyle.textContent += '#drivers thead .rota-day-heading-layout{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:5px}#drivers thead .rota-day-heading-date{display:block;text-align:center;line-height:1.35}#drivers thead .rota-day-surplus{display:flex;flex-direction:column;gap:2px;align-items:center;justify-content:center;font-size:11px;font-weight:700;font-variant-numeric:tabular-nums}#drivers thead .rota-day-surplus-value{display:block;min-width:23px;padding:1px 3px;border-radius:4px;background:#dfeaf6;color:#214b73}#drivers thead .rota-day-surplus-value:nth-child(2){background:#e6edf4}#drivers thead .rota-day-surplus-value.short{background:#ffe0e0;color:#bc2430}@media print{#drivers thead .rota-day-surplus{display:none}}';
+}
+// Daily filters are shared by the toolbar and clickable weekday headings.
+let rotaDayFilter='all',rotaStatusFilter='all';
+const dailyFilters=document.createElement('div');
+dailyFilters.className='rota-daily-filters';
+dailyFilters.innerHTML='<label>Day <select id="rota-day-filter"><option value="all">All days</option>'+days.map((day,i)=>'<option value="'+i+'">'+day+'</option>').join('')+'</select></label><label>Show <select id="rota-status-filter"><option value="all">All drivers</option><option value="available-unallocated">Available but not allocated</option><option value="allocated-unavailable">Allocated but not available</option><option value="available-allocated">Available and allocated</option></select></label><button type="button" id="rota-clear-day-filter">Clear</button><span id="rota-daily-filter-count" aria-live="polite"></span>';
+const filterSection=document.querySelector('#drivers').closest('section');
+const filterHeading=filterSection.querySelector('.driver-heading');
+filterHeading?.after(dailyFilters);
+const daySelect=dailyFilters.querySelector('#rota-day-filter'),statusSelect=dailyFilters.querySelector('#rota-status-filter');
+const clearDayFilter=dailyFilters.querySelector('#rota-clear-day-filter');
+function matchesDailyFilter(d,j){
+ if(rotaDayFilter==='all'||rotaStatusFilter==='all')return true;
+ const day=Number(rotaDayFilter),available=d.availability[day]===true;
+ const allocated=isWorkingAllocation(state.allocations[j][day]);
+ if(rotaStatusFilter==='available-unallocated')return available&&!allocated;
+ if(rotaStatusFilter==='allocated-unavailable')return allocated&&!available;
+ if(rotaStatusFilter==='available-allocated')return available&&allocated;
+ return true;
+}
+function updateDailyFilter(day,status){
+ rotaDayFilter=day;rotaStatusFilter=status;
+ daySelect.value=day;statusSelect.value=status;
+ render();
+}
+daySelect.addEventListener('change',()=>updateDailyFilter(daySelect.value,rotaStatusFilter));
+statusSelect.addEventListener('change',()=>updateDailyFilter(rotaDayFilter==='all'?'0':rotaDayFilter,statusSelect.value));
+clearDayFilter.addEventListener('click',()=>updateDailyFilter('all','all'));
+document.querySelector('#drivers thead').addEventListener('click',event=>{
+ const th=event.target.closest('th[data-rota-day]');
+ if(!th)return;
+ const day=th.dataset.rotaDay;
+ updateDailyFilter(day,rotaStatusFilter==='all'?'available-unallocated':rotaStatusFilter);
+});
+extraStyle.textContent += '.rota-daily-filters{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 12px;margin:8px 0;background:#f0f6fd;border:1px solid #cbdcec;border-radius:9px}.rota-daily-filters label{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:700;color:#244c73}.rota-daily-filters select,.rota-daily-filters button{padding:7px 9px;border:1px solid #b8cbe0;border-radius:6px;background:white;color:#234869}.rota-daily-filters button{cursor:pointer}#rota-daily-filter-count{font-size:12px;color:#335b79}#drivers thead th[data-rota-day]{cursor:pointer}#drivers thead th[data-rota-day]:hover{background:#d3e4f5!important}#drivers thead th[data-rota-day].rota-day-active{background:#d2e8fa!important;outline:2px solid #5b95c8;outline-offset:-2px}@media(max-width:767px){.rota-daily-filters label{flex:1 1 100%}.rota-daily-filters select{flex:1;min-height:44px}}';
 const expandedDrivers = new Set();
 let driverNameAscending=true;
 const driverSortButton=document.createElement('button');driverSortButton.type='button';driverSortButton.className='rota-name-sort';driverSortButton.textContent='Driver A–Z ↑';driverSortButton.title='Toggle driver name sorting A–Z or Z–A';driverSortButton.addEventListener('click',()=>{driverNameAscending=!driverNameAscending;driverSortButton.textContent=driverNameAscending?'Driver A–Z ↑':'Driver Z–A ↓';render()});
@@ -129,9 +202,9 @@ const header='<tr><th>Planning field</th>'+days.map((d,i)=>'<th>'+d+'<br><small>
 document.querySelector('#summary thead').innerHTML=header;
 const c=counts(),diff=(a,b)=>a.map((n,i)=>{const x=n-b[i];return (x>0?'+':'')+x});const shown=planningDraft||state.planning;
 document.querySelector('#summary tbody').innerHTML=['Route Target','Current Demand Signal','ECP','Required drivers'].map(n=>row(n,shown[n],true)).join('')+row('Approved available',c.available)+row('Allocated (headcount)',c.allocated)+row('Availability surplus / shortfall',diff(c.available,c.required))+row('Allocation surplus / shortfall',diff(c.allocated,c.required))+row('Available but unallocated',days.map((_,i)=>drivers.filter((d,j)=>d.availability[i]&&!isWorkingAllocation(state.allocations[j][i])).length))+['DA Capacity','Standby'].map(n=>row(n,shown[n],true)).join('');
-document.querySelector('#drivers thead').innerHTML='<tr><th>Driver / type</th><th>Row</th>'+days.map((d,i)=>'<th>'+d+'<br><small>'+fmt(new Date(mon.getTime()+i*86400000))+'</small></th>').join('')+'<th>Action</th></tr>';
+document.querySelector('#drivers thead').innerHTML='<tr><th>Driver / type</th><th>Row</th>'+days.map((d,i)=>'<th data-rota-day="'+i+'" title="Filter drivers for '+d+'" class="'+(rotaDayFilter===String(i)?'rota-day-active':'')+'">'+d+'<br><small>'+fmt(new Date(mon.getTime()+i*86400000))+'</small></th>').join('')+'<th>Action</th></tr>';
 const q=document.getElementById('search').value.toLowerCase(),f=document.getElementById('filter').value,options=[{code:'',label:'— Select —',active:true},...allocationOptions];
-document.querySelector('#drivers tbody').innerHTML=drivers.map((d,j)=>({d,j})).sort((a,b)=>(driverNameAscending?1:-1)*a.d.name.localeCompare(b.d.name,undefined,{sensitivity:'base',numeric:true})).filter(({d})=>[d.name,d.phone||'',d.email||'',d.type||''].join(' ').toLowerCase().includes(q)).filter(({d,j})=>f==='all'||(f==='pending'&&state.pending[j])||(f==='not-submitted'&&d.availability.every(a=>a===null))||(f==='availability-changed'&&window.rotaAvailabilityChangedKeys?.has(d.key))||(f==='conflict'&&d.availability.some((a,i)=>a===false&&!['','OFF'].includes(state.allocations[j][i])))).map(({d,j},displayIndex)=>{
+document.querySelector('#drivers tbody').innerHTML=drivers.map((d,j)=>({d,j})).sort((a,b)=>(driverNameAscending?1:-1)*a.d.name.localeCompare(b.d.name,undefined,{sensitivity:'base',numeric:true})).filter(({d})=>[d.name,d.phone||'',d.email||'',d.type||''].join(' ').toLowerCase().includes(q)).filter(({d,j})=>matchesDailyFilter(d,j)).filter(({d,j})=>f==='all'||(f==='pending'&&state.pending[j])||(f==='not-submitted'&&d.availability.every(a=>a===null))||(f==='availability-changed'&&window.rotaAvailabilityChangedKeys?.has(d.key))||(f==='conflict'&&d.availability.some((a,i)=>a===false&&!['','OFF'].includes(state.allocations[j][i])))).map(({d,j},displayIndex)=>{
 const alloc=state.allocations[j],hasConflict=d.availability.some((a,i)=>a===false&&!['','OFF'].includes(alloc[i]));
 const availableDays=d.availability.filter(a=>a===true).length,offDays=d.availability.filter(a=>a===false).length,unsubmittedDays=d.availability.filter(a=>a===null).length;
 const workingDays=alloc.filter(a=>isWorkingAllocation(a)).length,allocatedDays=alloc.filter(a=>a&&!['OFF'].includes(a)).length;
@@ -141,6 +214,7 @@ const training=(d.training||[]),trainingDone=training.filter(t=>t.done).length;
 const chips='<span class="rota-chip green">✓ '+availableDays+' available</span><span class="rota-chip red">'+offDays+' off</span>'+(unsubmittedDays?'<span class="rota-chip amber">'+unsubmittedDays+' not submitted</span>':'')+'<span class="rota-chip blue">'+allocatedDays+' allocated</span>'+(statusDays?'<span class="rota-chip purple">'+statusDays+' status updates</span>':'')+(conflictDays?'<span class="rota-chip red">⚠ '+conflictDays+' conflicts</span>':'')+(state.pending[j]?'<span class="rota-chip amber">🔔 Pending review</span>':'')+(training.length?'<span class="rota-chip '+(trainingDone===training.length?'green':'amber')+'">Training '+trainingDone+'/'+training.length+'</span>':'');
 return '<tr class="driver-accordion-heading"><td colspan="10"><button type="button" class="driver-accordion-toggle" data-toggle-driver="'+j+'" aria-expanded="'+expandedDrivers.has(d.key)+'"><span class="chevron">'+(expandedDrivers.has(d.key)?'▾':'▸')+'</span><span>'+(displayIndex+1)+'. '+safeText(d.name)+' <small>· '+safeText(d.type)+(hasConflict?' · ⚠ Conflict':'')+(state.pending[j]?' · 🔔 Pending':'')+'</small></span><span class="rota-driver-summary">'+chips+'</span><span class="rota-distribution-indicator" data-rota-distribution="'+safeText(d.key)+'">⚪ Checking rota…</span></button></td></tr><tr class="avail driver-accordion-detail driver-group-'+(displayIndex%2?'even':'odd')+'" '+(expandedDrivers.has(d.key)?'':'hidden')+'><td rowspan="3"><span class="driver-row-number">'+(displayIndex+1)+'.</span> <b>'+safeText(d.name)+'</b><br><small>'+safeText(d.type)+'</small><br><small class="driver-contact">'+safeText(d.phone||'No phone')+'<br>'+safeText(d.email||'No email')+(state.pending[j]?' · 🔔 Pending':'')+'</small><div class="driver-training" aria-label="Training completion">'+(d.training||[]).map(t=>'<span class="'+(t.done?'training-done':'training-missing')+'" title="'+(t.done?'Completed: ':'Not completed: ')+safeText(t.name)+'">'+(t.done?'✓ ':'✗ ')+safeText(t.name)+'</span>').join('')+'</div></td><td>Availability</td>'+d.availability.map(a=>'<td class="'+(a===null?'availability-empty':a?'availability-yes':'availability-no')+'">'+(a===null?'—':a?'YES':'NO')+'</td>').join('')+'<td>'+'<a class="edit-availability" href="/rota/driver/'+encodeURIComponent(String(d.key).replace(/^driver-/,''))+'/availability?week='+encodeURIComponent(weekKey())+'">Edit availability</a>'+(state.pending[j]?'<button data-review="'+j+'" '+(locked()?'disabled':'')+'>Review 🔔</button>':'')+'</td></tr><tr class="alloc driver-accordion-detail driver-group-'+(displayIndex%2?'even':'odd')+'" '+(expandedDrivers.has(d.key)?'':'hidden')+'><td>Allocation</td>'+alloc.map((v,i)=>'<td class="'+(isWorkingAllocation(v)?'allocation-full-day ':'')+(d.availability[i]===false&&!['','OFF'].includes(v)?'conflict':'')+'"><select aria-label="'+safeText(d.name)+' '+days[i]+' allocation" data-driver="'+j+'" data-day="'+i+'" '+(locked()?'disabled':'')+'>'+options.filter(o=>o.active||o.code===v).map(o=>'<option value="'+safeText(o.code)+'" '+(o.code===v?'selected':'')+'>'+safeText(o.code?(o.code+' ('+o.label+')'):o.label)+'</option>').join('')+'</select></td>').join('')+'<td><button class="send" disabled title="Sending requires authentication and WhatsApp setup">📲 Send rota</button>'+(hasConflict?' ⚠':'')+'</td></tr><tr class="status driver-accordion-detail driver-group-'+(displayIndex%2?'even':'odd')+'" '+(expandedDrivers.has(d.key)?'':'hidden')+'><td>Status</td>'+state.statuses[j].map((v,i)=>'<td class="'+(v?'status-alert':'')+'"><select aria-label="'+safeText(d.name)+' '+days[i]+' status" data-kind="status" data-driver="'+j+'" data-day="'+i+'" '+(locked()?'disabled':'')+'>'+driverStatuses().filter(o=>o.active||o.code===v).map(o=>'<option value="'+safeText(o.code)+'" '+(o.code===v?'selected':'')+'>'+safeText(o.code||'— Select —')+'</option>').join('')+'</select></td>').join('')+'<td>—</td></tr>'}).join('');
 document.querySelectorAll('#drivers tbody tr.driver-accordion-detail').forEach(row=>{Array.from(row.children).forEach((cell,i)=>{const firstDay=row.classList.contains('avail')?2:1;if(i>=firstDay&&i<firstDay+7)cell.dataset.dayLabel=days[i-firstDay];});});
+dailyFilters.querySelector('#rota-daily-filter-count').textContent=rotaDayFilter==='all'||rotaStatusFilter==='all'?'':document.querySelectorAll('#drivers tbody tr.driver-accordion-heading').length+' matching drivers';
 const expandAllCheckbox=document.getElementById('rota-expand-all');if(expandAllCheckbox){const shownDrivers=drivers.filter(d=>[d.name,d.phone||'',d.email||'',d.type||''].join(' ').toLowerCase().includes(q));expandAllCheckbox.checked=shownDrivers.length>0&&shownDrivers.every(d=>expandedDrivers.has(d.key));expandAllCheckbox.indeterminate=shownDrivers.some(d=>expandedDrivers.has(d.key))&&!expandAllCheckbox.checked;expandAllCheckbox.nextElementSibling.textContent=expandAllCheckbox.checked?'Collapse all drivers':'Expand all drivers';}
 updateUndo();planningSave.disabled=locked()||busy||!planningDraft||JSON.stringify(planningDraft)===JSON.stringify(state.planning);window.refreshWhatsApp?.();renderMobileDayCards();
 }
