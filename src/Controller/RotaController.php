@@ -33,7 +33,7 @@ const ukParts=Object.fromEntries(new Intl.DateTimeFormat('en-GB',{timeZone:'Euro
 function monday(){return new Date(start.getTime()+offset*604800000)}
 function isoWeek(date){const d=new Date(date);d.setUTCDate(d.getUTCDate()+4-(d.getUTCDay()||7));const y=new Date(Date.UTC(d.getUTCFullYear(),0,1));return Math.ceil((((d-y)/86400000)+1)/7)}
 function fmt(d){return d.toLocaleDateString('en-GB',{day:'numeric',month:'short',timeZone:'UTC'})}
-function render(){const mon=monday(),sun=new Date(mon.getTime()+6*86400000),isPast=mon<start;document.getElementById('week').textContent='Week '+isoWeek(mon)+' · '+fmt(mon)+' – '+fmt(sun)+' '+sun.getUTCFullYear();document.getElementById('lock').textContent=isPast?'🔒 Historical week · locked':'Planning week';
+function render(){const mon=monday(),sun=new Date(mon.getTime()+6*86400000),isPast=mon<new Date(start.getTime()-7*86400000);document.getElementById('week').textContent='Week '+isoWeek(mon)+' · '+fmt(mon)+' – '+fmt(sun)+' '+sun.getUTCFullYear();document.getElementById('lock').textContent=isPast?'🔒 Historical week · locked':'Planning week';
 const head='<tr><th>Planning field</th>'+days.map((d,i)=>'<th>'+d+'<br><small>'+fmt(new Date(mon.getTime()+i*86400000))+'</small></th>').join('')+'</tr>';document.querySelector('#summary thead').innerHTML=head;
 const rows=[['Route Target','—'],['Current Demand Signal','—'],['ECP','—'],['Required drivers', [2,2,2,2,2,1,1]],['Available drivers',days.map((_,i)=>drivers.filter(d=>d.availability[i]).length)],['Allocated drivers',days.map((_,i)=>drivers.filter(d=>['IN','HD','JUMPER'].includes(d.allocation[i])).length)],['Availability surplus / shortfall',null],['Allocation surplus / shortfall',null],['DA Capacity',null],['Standby',null]];
 const required=rows[3][1],available=rows[4][1],allocated=rows[5][1];rows[6][1]=days.map((_,i)=>available[i]-required[i]);rows[7][1]=days.map((_,i)=>allocated[i]-required[i]);
@@ -50,6 +50,8 @@ document.querySelector('#drivers tbody').innerHTML=drivers.filter(d=>d.name.toLo
  const strip=document.createElement('div');
  strip.style.cssText='display:flex;align-items:stretch;width:max-content';
  bar.appendChild(strip);document.body.appendChild(bar);
+ bar.style.pointerEvents='auto';
+ bar.addEventListener('click',event=>{const cell=event.target.closest('[data-rota-day]');if(cell&&cell.dataset.rotaDay!=='')document.querySelector('#drivers thead th[data-rota-day="'+cell.dataset.rotaDay+'"]')?.click();});
  function update(){
   const table=document.getElementById('drivers'),wrap=table?.parentElement,head=table?.querySelector('thead tr');
   if(!table||!wrap||!head)return;
@@ -63,8 +65,27 @@ document.querySelector('#drivers tbody').innerHTML=drivers.filter(d=>d.name.toLo
   if(originals.length!==cells.length){strip.replaceChildren(...cells.map(()=>document.createElement('div')));}
   cells.forEach((cell,i)=>{
    const item=strip.children[i],width=cell.getBoundingClientRect().width;
-   item.textContent=cell.textContent;
+   item.dataset.rotaDay=cell.dataset.rotaDay??'';
+   item.title=cell.hasAttribute('data-rota-day')?'Filter drivers for this day':'';
+   // Preserve the weekday/date and surplus values as separate elements.
+   // textContent flattened them into a single incorrect-looking line.
+   item.replaceChildren(...Array.from(cell.childNodes,node=>node.cloneNode(true)));
    item.style.cssText='box-sizing:border-box;flex:0 0 '+width+'px;width:'+width+'px;display:flex;align-items:center;justify-content:center;padding:5px 7px;background:#e8eef6;border-right:1px solid #d6e1ed;color:#29496f;font-weight:700;font-size:14px;white-space:nowrap';
+   item.style.cursor=cell.hasAttribute('data-rota-day')?'pointer':'default';
+   const layout=item.querySelector('.rota-day-heading-layout');
+   if(layout){
+    layout.style.cssText='display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:5px;width:100%';
+    const date=layout.querySelector('.rota-day-heading-date');
+    if(date)date.style.cssText='display:block;text-align:center;line-height:1.35;white-space:normal';
+    const figures=layout.querySelector('.rota-day-surplus');
+    if(figures){
+     figures.style.cssText='display:flex;flex-direction:column;gap:2px;align-items:center;justify-content:center;font-size:11px;font-weight:700';
+     figures.querySelectorAll('.rota-day-surplus-value').forEach((value,index)=>{
+      const short=value.classList.contains('short');
+      value.style.cssText='display:block;min-width:23px;padding:1px 3px;border-radius:4px;text-align:center;background:'+(short?'#ffe0e0':index===0?'#dfeaf6':'#e6edf4')+';color:'+(short?'#bc2430':'#214b73');
+     });
+    }
+   }
   });
   strip.style.height=headRect.height+'px';
   strip.style.transform='translateX(-'+wrap.scrollLeft+'px)';
@@ -76,7 +97,7 @@ document.querySelector('#drivers tbody').innerHTML=drivers.filter(d=>d.name.toLo
  document.addEventListener('scroll',schedule,{passive:true,capture:true});
  document.addEventListener('DOMContentLoaded',schedule);
 })();
-</script><script src="/rota-demo.js?v=38" defer></script><script src="/rota-share.js?v=6" defer></script><script src="/rota-whatsapp.js?v=14" defer></script><script src="/rota-deadlines.js?v=9" defer></script><script src="/rota-availability-reviews.js?v=6" defer></script></body></html>
+</script><script src="/rota-demo.js?v=42" defer></script><script src="/rota-share.js?v=6" defer></script><script src="/rota-whatsapp.js?v=15" defer></script><script src="/rota-deadlines.js?v=9" defer></script><script src="/rota-availability-reviews.js?v=6" defer></script></body></html>
 HTML;
         $token = htmlspecialchars($csrfManager->getToken('rota_edit')->getValue(), ENT_QUOTES, 'UTF-8');
         if (!$this->isGranted('ROLE_ADMIN')) { $html = str_replace('<a href="/admin/settings" style="color:#fff;margin-right:14px;font-size:12px">⚙ Admin Settings</a><a href="/driver/availability?preview=1" style="color:#fff;margin-right:14px;font-size:12px">Driver preview</a>', '', $html); }
