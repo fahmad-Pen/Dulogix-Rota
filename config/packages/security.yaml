@@ -30,6 +30,7 @@ security:
         - { path: ^/logout$, roles: PUBLIC_ACCESS }
         - { path: ^/account$, roles: ROLE_USER }
         - { path: ^/driver/availability$, roles: ROLE_USER }
+        - { path: ^/driver-performance, roles: ROLE_OPERATIONS }
         - { path: ^/driver, roles: ROLE_DRIVER }
         - { path: ^/admin, roles: ROLE_OPERATIONS }
         - { path: ^/, roles: ROLE_OPERATIONS }
