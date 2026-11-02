@@ -6,26 +6,16 @@ use Symfony\Component\HttpFoundation\File\UploadedFile;
 /** Extracts POD driver rows from PDF, HTML/MHTML, CSV, XLSX, or pasted text. */
 final class PodReportReader
 {
-    public function read(?UploadedFile $file, string $paste = ''): array
+    public function read(?UploadedFile $file, string $paste = '', string $requiredTitle = 'Photo on Delivery Quality Report'): array
     {
-        if ($file && (!$file->isValid() || $file->getSize() > 10000000)) throw new \InvalidArgumentException('Upload failed or file exceeds 10 MB.');
+        if ($file && (!$file->isValid() || $file->getSize() > 20000000)) throw new \InvalidArgumentException('Upload failed or file exceeds 20 MB.');
         $ext = $file ? strtolower(pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION)) : '';
         if ($file && !in_array($ext, ['pdf','html','htm','mhtml','mht','csv','txt','xlsx'], true)) throw new \InvalidArgumentException('Supported: PDF, HTML, MHTML, XLSX, CSV, TXT.');
-        if ($ext === 'pdf') {
-            $handle = fopen($file->getPathname(), 'rb');
-            $signature = $handle ? fread($handle, 5) : '';
-            if ($handle) fclose($handle);
-            if ($signature !== '%PDF-') throw new \InvalidArgumentException('The uploaded file is not a PDF.');
-            $output = [];
-            $code = 0;
-            exec('/usr/bin/pdftotext -layout -nopgbrk '.escapeshellarg($file->getPathname()).' - 2>/dev/null', $output, $code);
-            if ($code !== 0) throw new \InvalidArgumentException('Unable to extract PDF text.');
-            $rawRows = array_map(static fn($line) => preg_split('/\s{2,}/', trim($line)) ?: [], $output);
-        } elseif ($ext === 'xlsx') {
-            $rawRows = $this->xlsxRows($file->getPathname());
-        } else {
-            $rawRows = (new PerformanceReportReader())->read($file, $paste);
-        }
+        // Use the same extraction path as the working DSP Summary importer.
+        $rawRows = (new PerformanceReportReader())->read($file, $paste);
+        PerformanceReportTitle::requireTitle($rawRows, $requiredTitle, 'POD');
+        // As with DSP, validate the configured report title and driver-row structure.
+        // PDF/HTML exports often split or omit visible column headings.
         $rows = [];
         foreach ($rawRows as $cells) {
             $cells = array_values(array_map(static fn($v) => trim((string)$v), $cells));
@@ -36,8 +26,8 @@ final class PodReportReader
                 $id = strtoupper(preg_replace('/\s+/', '', $candidate));
                 if (!preg_match('/^[A-Z0-9]{10,40}$/', $id) || !preg_match('/[A-Z]/', $id)) continue;
                 $values = array_slice($cells, $i + 1, 9);
-                if (count($values) !== 9 || count(array_filter($values, static fn($v) => preg_match('/^\d+(?:,\d{3})*$/', $v))) !== 9) continue;
-                $values = array_map(static fn($v) => (int)str_replace(',', '', $v), $values);
+                if (count($values) !== 9 || count(array_filter($values, static fn($v) => in_array($v, ['', '-'], true) || preg_match('/^\d+(?:,\d{3})*$/', $v))) !== 9) continue;
+                $values = array_map(static fn($v) => in_array($v, ['', '-'], true) ? 0 : (int)str_replace(',', '', $v), $values);
                 if ($values[1] + $values[2] + $values[3] > $values[0]) continue;
                 if (isset($rows[$id])) throw new \InvalidArgumentException('Duplicate Transporter ID in report: '.$id);
                 $rows[$id] = $values;

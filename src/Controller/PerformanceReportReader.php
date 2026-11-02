@@ -47,6 +47,14 @@ final class PerformanceReportReader
             libxml_use_internal_errors($prior);
         }
         $rows = [];
+        // Keep report headings outside tables for report-type validation.
+        // These rows do not contain transporter IDs and are ignored by data parsers.
+        foreach (['title', 'h1', 'h2', 'h3', 'caption'] as $tag) {
+            foreach ($dom->getElementsByTagName($tag) as $heading) {
+                $headingText = trim(preg_replace('/\\s+/', ' ', $heading->textContent));
+                if ($headingText !== '') $rows[] = [$headingText];
+            }
+        }
         foreach ($dom->getElementsByTagName('tr') as $tr) {
             $cells = [];
             foreach ($tr->childNodes as $node) {
