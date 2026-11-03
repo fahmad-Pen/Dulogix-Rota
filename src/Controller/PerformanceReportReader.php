@@ -19,9 +19,28 @@ final class PerformanceReportReader
                 $signature = $stream ? fread($stream, 5) : '';
                 if ($stream) fclose($stream);
                 if ($signature !== '%PDF-') throw new \InvalidArgumentException('Invalid PDF file.');
-                $lines = []; $exit = 0;
-                exec('/usr/bin/pdftotext -layout -nopgbrk '.escapeshellarg($file->getPathname()).' - 2>/dev/null', $lines, $exit);
-                if ($exit !== 0) throw new \InvalidArgumentException('Could not read PDF text.');
+                // Prefer Poppler when available; fall back to a Composer-installed
+                // pure-PHP PDF parser on hosts such as IONOS shared hosting.
+                $lines = [];
+                $disabled = array_map('trim', explode(',', (string) ini_get('disable_functions')));
+                if (function_exists('exec') && !in_array('exec', $disabled, true)) {
+                    foreach (['/usr/bin/pdftotext', '/usr/local/bin/pdftotext', '/bin/pdftotext'] as $binary) {
+                        if (!is_file($binary) || !is_executable($binary)) continue;
+                        $exit = 0;
+                        exec(escapeshellarg($binary).' -layout -nopgbrk '.escapeshellarg($file->getPathname()).' - 2>/dev/null', $lines, $exit);
+                        if ($exit === 0 && trim(implode('', $lines)) !== '') break;
+                        $lines = [];
+                    }
+                }
+                if (!$lines) {
+                    try {
+                        $text = (new \Smalot\PdfParser\Parser())->parseFile($file->getPathname())->getText();
+                        if (trim($text) === '') throw new \RuntimeException('No selectable text');
+                        $lines = preg_split('/\r\n|\n|\r/', $text) ?: [];
+                    } catch (\Throwable $error) {
+                        throw new \InvalidArgumentException('Could not extract text from this PDF. Check that it contains selectable text (not scanned images).', 0, $error);
+                    }
+                }
                 return array_map(static fn($line) => preg_split('/\s{2,}/', trim($line)) ?: [], $lines);
             }
             $raw = (string)file_get_contents($file->getPathname());
