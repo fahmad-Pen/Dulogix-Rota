@@ -19,15 +19,35 @@ final class PerformanceReportReader
                 $signature = $stream ? fread($stream, 5) : '';
                 if ($stream) fclose($stream);
                 if ($signature !== '%PDF-') throw new \InvalidArgumentException('Invalid PDF file.');
-                // Prefer Poppler when available; fall back to a Composer-installed
-                // pure-PHP PDF parser on hosts such as IONOS shared hosting.
+                // Prefer Poppler on both local Docker and IONOS shared hosting.
+                // IONOS uses a private ARM64 installation with its own libraries.
                 $lines = [];
                 $disabled = array_map('trim', explode(',', (string) ini_get('disable_functions')));
+                $configuredBinary = getenv('PDFTOTEXT_BINARY') ?: '';
+                $configuredLibraryPath = getenv('PDFTOTEXT_LIBRARY_PATH') ?: '';
+                $binaries = array_values(array_unique(array_filter([
+                    $configuredBinary,
+                    '/home/www/poppler-local/usr/bin/pdftotext',
+                    '/usr/bin/pdftotext',
+                    '/usr/local/bin/pdftotext',
+                    '/bin/pdftotext',
+                ])));
                 if (function_exists('exec') && !in_array('exec', $disabled, true)) {
-                    foreach (['/usr/bin/pdftotext', '/usr/local/bin/pdftotext', '/bin/pdftotext'] as $binary) {
+                    foreach ($binaries as $binary) {
                         if (!is_file($binary) || !is_executable($binary)) continue;
+                        $libraryPath = $configuredLibraryPath;
+                        if ($libraryPath === '' && $binary === '/home/www/poppler-local/usr/bin/pdftotext') {
+                            $libraryPath = '/home/www/poppler-local/usr/lib/aarch64-linux-gnu';
+                        }
+                        $command = '';
+                        if ($libraryPath !== '') {
+                            // Use an environment assignment scoped to this process only.
+                            $command .= 'LD_LIBRARY_PATH='.escapeshellarg($libraryPath).' ';
+                        }
+                        $command .= escapeshellarg($binary).' -layout -nopgbrk '
+                            .escapeshellarg($file->getPathname()).' - 2>/dev/null';
                         $exit = 0;
-                        exec(escapeshellarg($binary).' -layout -nopgbrk '.escapeshellarg($file->getPathname()).' - 2>/dev/null', $lines, $exit);
+                        exec($command, $lines, $exit);
                         if ($exit === 0 && trim(implode('', $lines)) !== '') break;
                         $lines = [];
                     }
