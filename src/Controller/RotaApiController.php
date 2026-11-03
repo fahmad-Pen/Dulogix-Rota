@@ -23,7 +23,7 @@ final class RotaApiController extends AbstractController
         $date = $this->validWeek($week);
         if (!$date) return $this->json(['error' => 'Invalid ISO Monday'], 422);
         $records = $em->getRepository(RotaCell::class)->findBy(['weekStart' => $date]);
-        $driverAccounts = array_values(array_filter($em->getRepository(User::class)->findAll(), static fn(User $u) => in_array($u->getDriverType(), ['DRIVER', 'JUMPER'], true) && !in_array('ROLE_ADMIN', $u->getRoles(), true) && !in_array('ROLE_MANAGER', $u->getRoles(), true)));
+        $driverAccounts = array_values(array_filter($em->getRepository(User::class)->findAll(), static fn(User $u) => $u->isActive() && in_array($u->getDriverType(), ['DRIVER', 'JUMPER'], true) && !in_array('ROLE_ADMIN', $u->getRoles(), true) && !in_array('ROLE_MANAGER', $u->getRoles(), true)));
         $requirements = $db->fetchAllAssociative('SELECT id, name FROM driver_requirement ORDER BY sort_order, id');
         $completed = [];
         foreach ($db->fetchAllAssociative('SELECT driver_id, requirement_id FROM driver_requirement_completion') as $item) $completed[(int)$item['driver_id']][(int)$item['requirement_id']] = true;
