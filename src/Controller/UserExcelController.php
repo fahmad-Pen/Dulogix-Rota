@@ -51,6 +51,11 @@ final class UserExcelController extends AbstractController
     private static function readXlsx(string $path):array{
         $zip=new \ZipArchive();if($zip->open($path)!==true)throw new \RuntimeException('Not a valid XLSX file.');
         try{
+            if($zip->numFiles>150)throw new \RuntimeException('Workbook has too many entries.');
+            foreach(['xl/sharedStrings.xml'=>2_000_000,'xl/worksheets/sheet1.xml'=>5_000_000] as $entry=>$maxBytes){
+                $stat=$zip->statName($entry);
+                if($stat!==false && $stat['size']>$maxBytes)throw new \RuntimeException('Workbook XML entry is too large.');
+            }
             $shared=[];$strings=$zip->getFromName('xl/sharedStrings.xml');
             if($strings!==false){
                 $doc=new \DOMDocument();if(!@$doc->loadXML($strings,LIBXML_NONET))throw new \RuntimeException('Invalid Excel strings.');

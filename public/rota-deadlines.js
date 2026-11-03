@@ -22,6 +22,7 @@ function render(){
  }
  let copies='';
  for(const key of ['broadcast','outstanding'])if(data.deadlines[key]?.enabled)copies+='<button type="button" data-copy="'+key+'" style="margin:8px 8px 8px 0">📋 Copy '+(key==='broadcast'?'initial message':'final reminder')+'</button>';
+ copies+='<button type="button" data-copy="next-week" style="margin:8px 8px 8px 0">Request availability - '+esc(new Date(Date.parse(data.week+'T12:00:00Z')+7*86400000).toLocaleDateString('en-GB',{day:'numeric',month:'short',timeZone:'UTC'}))+'</button>';
  panel.innerHTML='<h2>📅 Weekly actions · rota commencing '+esc(data.week)+'</h2><p><strong>'+data.submitted+' / '+data.total+'</strong> drivers submitted availability · <strong>'+pending+'</strong> outstanding</p>'+rows+copies+'<p class="note">Tick when completed. WhatsApp messages are sent manually; Dulogix records the manager and time.</p><details><summary>View '+pending+' drivers awaiting full availability</summary><div style="padding:10px">'+(pending?[...data.outstanding,...data.partial].map(d=>'<div>'+esc(d.name)+' — '+(d.days?d.days+'/7 days':'Not started')+'</div>').join(''):'Everyone has submitted.')+'</div></details>';
  panel.querySelectorAll('[data-check]').forEach(box=>box.onchange=async()=>{
   const key=box.dataset.check,checked=box.checked;
@@ -38,6 +39,16 @@ function render(){
  });
  panel.querySelectorAll('[data-copy]').forEach(btn=>btn.onclick=async()=>{
   const key=btn.dataset.copy,deadline=fmt(data.deadlines.availability.at);
+  if(key==='next-week'){
+   const next=new Date(data.week+'T12:00:00Z');next.setUTCDate(next.getUTCDate()+7);
+   const end=new Date(next);end.setUTCDate(end.getUTCDate()+6);
+   const date=d=>d.toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric',timeZone:'UTC'});
+   const monday=next.toISOString().slice(0,10);
+   const content='DULOGIX - Availability Request\n\nPlease submit your availability for the week commencing '+date(next)+' ('+date(next)+' to '+date(end)+').\n\nSelect Available or Off for all seven days.\n\nSubmit here: '+'https://app.dulogix.co.uk/driver/availability?week='+monday+'\n\nThank you!';
+   try{await navigator.clipboard.writeText(content);alert('Next week availability message copied.');}
+   catch(e){const area=document.createElement('textarea');area.value=content;panel.append(area);area.select();alert('Copy the selected message.');}
+   return;
+  }
   const msg=key==='broadcast'?data.message:'🔔 DULOGIX – Final Availability Reminder\n\nPlease submit your availability for next week before the deadline.\n\n📅 Submit here: https://app.dulogix.co.uk/driver/availability\n\n✅ If you have already submitted your availability, please ignore this reminder. Thank you!';
   const content=msg+'\n\nDeadline: '+deadline+' (UK time).';
   try{await navigator.clipboard.writeText(content);alert('Message copied. Send in WhatsApp, then tick the checkbox.');}

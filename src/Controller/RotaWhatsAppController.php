@@ -36,9 +36,11 @@ final class RotaWhatsAppController extends AbstractController
             return $this->json(['error' => 'Invalid week'], 422);
         }
         $today = new \DateTimeImmutable('now', new \DateTimeZone('Europe/London'));
-        $nextMonday = $today->modify('monday next week')->setTime(0, 0);
-        if ($date->format('Y-m-d') !== $nextMonday->format('Y-m-d')) {
-            return $this->json(['error' => 'Only the coming week can be shared'], 422);
+        $thisMonday = $today->modify('monday this week')->setTime(0, 0);
+        $lastMonday = $thisMonday->modify('-7 days');
+        $nextMonday = $thisMonday->modify('+7 days');
+        if ($date < $lastMonday || $date > $nextMonday) {
+            return $this->json(['error' => 'Only last week, this week or the coming week can be shared'], 422);
         }
         $driver = $em->getRepository(User::class)->find($id);
         if (!$driver || !in_array('ROLE_DRIVER', $driver->getRoles(), true)) {
