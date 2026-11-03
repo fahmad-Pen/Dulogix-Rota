@@ -18,6 +18,7 @@ for(const emoji of emojis){const button=document.createElement('button');button.
 composer.querySelector('#wa-emoji-toggle').onclick=()=>{emojiPicker.hidden=!emojiPicker.hidden};
 const composerStyle=document.createElement('style');
 composerStyle.textContent='.wa-composer{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:12px 0 4px;padding:9px 12px;border:1px solid #cbded6;border-radius:14px;background:#eaf7f0}.wa-composer #wa-emoji-toggle{font-size:22px;border:0;background:white;border-radius:50%;width:43px;height:43px;cursor:pointer}.wa-composer-label{font-size:13px;color:#456457}.wa-emoji-picker{width:100%;display:grid;grid-template-columns:repeat(auto-fill,minmax(40px,1fr));gap:4px;padding:8px;background:white;border-radius:10px;box-shadow:0 2px 10px #1232}.wa-emoji-picker[hidden]{display:none}.wa-emoji-picker button{border:0;background:transparent;font-size:23px;padding:5px;cursor:pointer}.wa-emoji-picker button:hover{background:#e1f6e8}#wa-message{border:1px solid #a8cfb8;border-radius:14px;padding:14px;font:15px system-ui;line-height:1.5;resize:vertical;background:#fff}';
+composerStyle.textContent+='#drivers .driver-accordion-heading>td{position:relative}#drivers .driver-accordion-heading .wa-driver-select{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:18px;height:18px;z-index:3;cursor:pointer}#drivers .driver-accordion-heading .driver-accordion-toggle{padding-left:40px!important}';
 document.head.append(composerStyle);
 const $=id=>document.getElementById(id);
 const driverId=d=>Number(d.key.slice(7));
@@ -36,11 +37,14 @@ rows.forEach(row=>{
  const name=row.querySelector('td:first-child b')?.textContent;
  const d=drivers.find(x=>x.name===name);
  if(!d)return;
- const td=row.querySelector('td:first-child');
- if(!td.querySelector('[data-wa-select]')){
-  const box=document.createElement('input');box.type='checkbox';box.dataset.waSelect=d.key;box.setAttribute('aria-label','Select '+d.name);box.style.marginRight='6px';td.prepend(box);
+ const heading=row.previousElementSibling;
+ const toggle=heading?.querySelector('.driver-accordion-toggle');
+ if(toggle&&!heading.querySelector('[data-wa-select]')){
+  const box=document.createElement('input');box.type='checkbox';box.dataset.waSelect=d.key;box.setAttribute('aria-label','Select '+d.name);box.className='wa-driver-select';
+  toggle.before(box);
  }
- td.querySelector('[data-wa-select]').checked=selected.has(d.key);
+ const checkbox=heading?.querySelector('[data-wa-select]');
+ if(checkbox)checkbox.checked=selected.has(d.key);
  const allocationAction=row.nextElementSibling?.lastElementChild;
  const statusAction=row.nextElementSibling?.nextElementSibling?.lastElementChild;
  if(!allocationAction||!statusAction)return;
