@@ -118,7 +118,7 @@ final class UserExcelController extends AbstractController
             if($role==='Driver'&&!in_array($type,['DRIVER','JUMPER'],true))$issues[]='operational type must be DRIVER or JUMPER';
             if($role!=='Driver'&&$type!=='N/A')$issues[]='operational type must be N/A';
             $sections=$permissions==='N/A'?[]:array_map('trim',explode(',',$permissions));
-            if($role==='Manager'&&(!$sections||array_diff($sections,array_keys(SectionAccess::SECTIONS))))$issues[]='manager permissions must be rota, vehicle and/or operations';
+            if($role==='Manager'&&(!$sections||array_diff($sections,array_keys(SectionAccess::SECTIONS))))$issues[]='invalid manager permissions';
             if($role!=='Manager'&&$permissions!=='N/A')$issues[]='manager permissions must be N/A';
             if($suffix===''||($role==='Driver'?!DriverPasswordPolicy::valid($username.$suffix):strlen($username.$suffix)<12))$issues[]=$role==='Driver'?'password must be 8+ characters with a number and special character':'password must be at least 12 characters';
             if($issues){$errors[]='Row '.$line.': '.implode('; ',$issues);continue;}

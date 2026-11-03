@@ -2,17 +2,25 @@
 namespace App\Controller;
 use App\Entity\User;
 final class SectionAccess {
-    public const SECTIONS = ['rota' => 'Rota Management', 'vehicle' => 'Vehicle Management', 'operations' => 'Operations'];
+    public const SECTIONS = ['rota' => 'Rota Management', 'vehicle' => 'Vehicle Management', 'operations' => 'Operations', 'performance_read' => 'Driver Performance (Read Only)', 'performance_full' => 'Driver Performance (Full Access)'];
     public static function allowed(?User $user, string $section): bool {
         if (!$user || !isset(self::SECTIONS[$section])) return false;
         if (in_array('ROLE_ADMIN', $user->getRoles(), true)) return true;
         return in_array('ROLE_MANAGER', $user->getRoles(), true) && in_array($section, $user->getSections(), true);
+    }
+    public static function performanceLevel(?User $user): string {
+        if (!$user) return 'none';
+        if (in_array('ROLE_ADMIN', $user->getRoles(), true)) return 'full';
+        if (!in_array('ROLE_MANAGER', $user->getRoles(), true)) return 'none';
+        if (in_array('performance_full', $user->getSections(), true)) return 'full';
+        return in_array('performance_read', $user->getSections(), true) ? 'read' : 'none';
     }
     public static function navigation(?User $user): string {
         if (!$user) return '';
         $html = '<button type="button" class="du-hamburger" aria-expanded="false" aria-controls="du-main-nav" aria-label="Open menu"><span aria-hidden="true">☰</span><span class="du-hamburger-label">Menu</span></button><nav id="du-main-nav" class="du-nav" aria-label="Main navigation">';
         if (self::allowed($user, 'rota')) $html .= '<details class="du-menu"><summary>Rota Management</summary><div class="du-submenu"><a href="/">Weekly rota</a><a href="/admin/users?view=drivers">Drivers</a></div></details>';
         if (self::allowed($user, 'operations')) $html .= '<details class="du-menu"><summary>Operations</summary><div class="du-submenu"><a href="/operations/report">Operations Report</a></div></details>';
+        if (self::performanceLevel($user) !== 'none') $html .= '<details class="du-menu"><summary>Driver Performance</summary><div class="du-submenu"><a href="/driver-performance">Performance Hub</a></div></details>';
         if (self::allowed($user, 'vehicle')) $html .= '<details class="du-menu"><summary>Vehicle Management</summary><div class="du-submenu"><a href="/vehicles">Vehicle dashboard</a></div></details>';
         if (in_array('ROLE_ADMIN', $user->getRoles(), true)) $html .= '<details class="du-menu"><summary>Settings</summary><div class="du-submenu"><a href="/admin/users">Users</a><a href="/admin/settings">Rota settings</a><a href="/admin/whatsapp-messages">WhatsApp Quick Messages</a></div></details>';
         if (in_array('ROLE_DRIVER', $user->getRoles(), true)) $html .= '<a href="/driver/daily-check">Daily Shift Check</a><a href="/driver/availability">My Availability</a>';
