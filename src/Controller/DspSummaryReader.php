@@ -18,6 +18,34 @@ final class DspSummaryReader
                 break;
             }
         }
+        // Portable PDF extractors may preserve only single spaces (or put
+        // individual cells on separate lines). Reconstruct numbered DSP table
+        // rows from their strongly typed columns rather than visual spacing.
+        if ($file && strtolower($file->getClientOriginalExtension()) === 'pdf') {
+            $plainText = implode("\n", array_map(
+                static fn(array $cells): string => implode(' ', array_map('strval', $cells)),
+                array_slice($rows, ($sectionStart ?? -1) + 1)
+            ));
+            $pattern = '/(?:^|\n)[ \t]*(\d{1,4})\s+([A-Z0-9]{10,40})((?:\s+[\d,.%\-]+){9})(?=\s|$)/m';
+            preg_match_all($pattern, $plainText, $matches, PREG_SET_ORDER);
+            if (count($matches) >= 5) {
+                $reconstructed = [];
+                foreach ($matches as $match) {
+                    $number = (int) $match[1];
+                    // Reject incomplete or out-of-order extraction, never
+                    // silently import a subset of a weekly report.
+                    if ($number !== count($reconstructed) + 1) {
+                        throw new \InvalidArgumentException('DSP PDF driver rows are incomplete or out of order. No data was changed.');
+                    }
+                    $reconstructed[] = array_merge(
+                        [$match[1], $match[2]],
+                        preg_split('/\s+/', trim($match[3])) ?: []
+                    );
+                }
+                $rows = $reconstructed;
+                $sectionStart = null;
+            }
+        }
         $results = [];
         $started = false;
         foreach ($rows as $index => $cells) {
