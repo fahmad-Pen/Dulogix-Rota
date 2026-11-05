@@ -57,15 +57,24 @@ async function pdfFromReport(){
  }finally{URL.revokeObjectURL(url);}
 }
 window.driverScorecardPdf=pdfFromReport;
-async function sharePdf(button){
- const blob=await pdfFromReport();
- const filename='Dulogix-scorecard-'+(button.dataset.id||'driver')+'.pdf';
- const file=new File([blob],filename,{type:'application/pdf'});
- if(!navigator.share||!navigator.canShare?.({files:[file]})){
-  throw Error('Direct PDF sharing is unavailable in this browser. Open this page on a supported phone to share directly to WhatsApp.');
+let preparedPdf=null,preparedId=null;
+dialog.addEventListener('close',()=>{preparedPdf=null;preparedId=null;action.textContent='Share PDF';});
+function downloadPdf(file){
+ const url=URL.createObjectURL(file);
+ const link=document.createElement('a');link.href=url;link.download=file.name;
+ document.body.append(link);link.click();link.remove();
+ setTimeout(()=>URL.revokeObjectURL(url),60000);
+}
+function sharePdf(button){
+ const file=preparedPdf;
+ if(!file||preparedId!==button.dataset.id)throw Error('Prepare the PDF first.');
+ if(navigator.share&&navigator.canShare?.({files:[file]})){
+  // Call share synchronously during the click gesture, before any await.
+  return navigator.share({files:[file],title:'Dulogix weekly scorecard - '+button.dataset.driver});
  }
- await navigator.share({files:[file],title:'Dulogix weekly scorecard - '+button.dataset.driver});
- return true;
+ downloadPdf(file);
+ alert('PDF downloaded. You can attach it to WhatsApp or another message.');
+ return Promise.resolve();
 }
 window.driverScorecardSharePdf=sharePdf;
 
@@ -101,13 +110,32 @@ action.addEventListener('click',async(e)=>{
  e.preventDefault();e.stopPropagation();
  if(busy)return;
  const button=window.driverScorecardCurrentButton;
- if(!button){alert('Open a driver scorecard first.');return}
+ if(!button){alert('Open a driver scorecard first.');return;}
+ if(preparedPdf&&preparedId===button.dataset.id){
+  try{
+   // No asynchronous work before the browser's native share request.
+   const result=sharePdf(button);
+   await result;
+  }catch(error){
+   if(error.name==='AbortError')return;
+   if(error.name==='NotAllowedError'){
+    downloadPdf(preparedPdf);
+    alert('Browser blocked direct sharing. The PDF was downloaded so you can attach it manually.');
+   }else alert('Unable to share scorecard: '+error.message);
+  }
+  return;
+ }
  busy=true;action.disabled=true;
- const old=action.textContent;action.textContent='Preparing PDF...';
+ action.textContent='Preparing PDF...';
  try{
-  await sharePdf(button);
-  // Keep the A4 report open after the native share sheet closes.
- }catch(error){alert('Unable to share scorecard: '+error.message)}
- finally{busy=false;action.disabled=false;action.textContent=old}
+  const blob=await pdfFromReport();
+  preparedId=button.dataset.id;
+  preparedPdf=new File([blob],'Dulogix-scorecard-'+(button.dataset.id||'driver')+'.pdf',{type:'application/pdf'});
+  action.textContent='Share prepared PDF';
+  alert('PDF is ready. Click ?Share prepared PDF? to share it, or download it if your browser does not support file sharing.');
+ }catch(error){
+  action.textContent='Share PDF';
+  alert('Unable to prepare scorecard PDF: '+error.message);
+ }finally{busy=false;action.disabled=false;}
 });
 })();
