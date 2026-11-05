@@ -2,6 +2,12 @@
 'use strict';
 async function copyPng(blob){
  if(!navigator.clipboard?.write||!window.ClipboardItem)throw Error('Image clipboard unavailable in this browser.');
+ if(blob.type!=='image/png'){
+  const bitmap=await createImageBitmap(blob);
+  try{const canvas=document.createElement('canvas');canvas.width=bitmap.width;canvas.height=bitmap.height;canvas.getContext('2d').drawImage(bitmap,0,0);blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));}
+  finally{bitmap.close();}
+  if(!blob)throw Error('Could not prepare image for clipboard.');
+ }
  await navigator.clipboard.write([new ClipboardItem({'image/png':blob})]);
 }
 function phone(value){
