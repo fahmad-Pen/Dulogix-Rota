@@ -13,16 +13,17 @@ async function prepare(){if(busy||opened||!queue.length)return;busy=true;const b
  const blob=await window.driverScorecardMobileImage();
  dlg.close();
  await window.openDulogixPreparedImage({
-  blob,filename:'Dulogix-scorecard-'+b.dataset.id+'.png',
+  blob,clipboardBlob:window.driverScorecardClipboardPng,filename:'Dulogix-scorecard-'+b.dataset.id+'.jpg',
   title:'Share scorecard image - '+b.dataset.driver,
   phone:b.dataset.phone,
-  description:'Dulogix weekly scorecard for '+b.dataset.driver
+  description:'Dulogix weekly scorecard for '+b.dataset.driver,
+  asDocument:true
  });
 }else{
- await window.driverScorecardSharePdf(b);
+ await window.driverScorecardDownloadPdf(b);
  dlg.close();
 }
-opened=b;$('sc-progress').textContent='Ready for '+b.dataset.driver+'. After sending the scorecard in WhatsApp, click Mark as sent & continue.'}catch(e){if(dlg.open)dlg.close();$('sc-progress').textContent=b.dataset.driver+': '+e.message+'. Retry or skip.'}finally{busy=false;controls()}}
+opened=b;$('sc-progress').textContent='Prepared for '+b.dataset.driver+'. After sending the scorecard in WhatsApp, click Mark as sent & continue.'}catch(e){if(dlg.open)dlg.close();$('sc-progress').textContent=b.dataset.driver+': '+e.message+'. Retry or skip.'}finally{busy=false;controls()}}
 $('sc-start').onclick=()=>{if(queue.length&&!confirm('Replace current queue?'))return;format=$('sc-format').value;queue=buttons.filter(b=>b.closest('tr')?.querySelector('.driver-row-select:checked'));if(!queue.length){$('sc-progress').textContent='Select a driver first.';return}done=0;total=queue.length;opened=null;controls();prepare()};
 $('sc-next').onclick=prepare;$('sc-skip').onclick=()=>{if(!opened)return;queue.shift();done++;opened=null;controls();$('sc-progress').textContent='Skipped. Prepare next driver.'};
 $('sc-confirm').onclick=async()=>{if(!opened||busy)return;const b=opened;busy=true;$('sc-confirm').disabled=true;try{const r=await fetch(base+'/'+b.dataset.userId,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRF-Token':cfg.csrf},body:JSON.stringify({signature:await signature(b)})});const d=await r.json();if(!r.ok)throw Error(d.error||'Save failed');queue.shift();done++;opened=null;await load();$('sc-progress').textContent='Confirmed sent for '+b.dataset.driver+'. '+done+' of '+total+' processed.'+(queue.length?' Prepare next driver.':' Complete.')}catch(e){$('sc-progress').textContent='Confirmation failed: '+e.message}finally{busy=false;$('sc-confirm').disabled=false;controls()}};

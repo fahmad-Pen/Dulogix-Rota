@@ -9,18 +9,58 @@ overlay.style.cssText='position:fixed;inset:0;background:#10243ac9;z-index:1000;
 overlay.innerHTML='<div style="background:white;border-radius:12px;padding:18px;width:min(540px,100%);max-height:95vh;overflow:auto"><h2 style="margin:0 0 12px">Share driver rota</h2><img id="rota-share-preview" alt="Weekly rota card preview" style="width:100%;border:1px solid #dce5ef;border-radius:8px"><p id="rota-share-status" aria-live="polite"></p><div style="display:flex;gap:8px;flex-wrap:wrap"><button id="rota-copy-image" type="button" style="background:#137b53;color:white;font-size:15px;padding:12px;flex:1">📋 Copy image + open WhatsApp</button><button id="rota-mobile-direct" type="button" style="background:#137b53;color:white;font-size:15px;padding:12px;flex:1">📋 Copy + open driver</button><button id="rota-share-now" type="button" style="font-size:15px;padding:12px;flex:1">📲 Share on phone</button><button id="rota-share-close" type="button">Close</button></div></div>';
 document.body.append(overlay);
 const preview=overlay.querySelector('#rota-share-preview'),status=overlay.querySelector('#rota-share-status'),shareButton=overlay.querySelector('#rota-share-now');
-let file=null,shareText='',target='';
+const previewFrame=document.createElement('div');
+previewFrame.style.cssText='max-height:65vh;overflow:auto;border:1px solid #dce5ef;border-radius:8px;background:#f2f5f9';
+preview.parentElement.insertBefore(previewFrame,preview);
+previewFrame.append(preview);
+const previewControls=document.createElement('div');
+previewControls.style.cssText='display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:8px 0';
+previewControls.innerHTML='<button type="button" id="sc-preview-fit">Fit preview</button><button type="button" id="sc-preview-actual">View at 100% (scroll)</button><span id="sc-preview-size"></span>';
+previewFrame.after(previewControls);
+const previewSize=previewControls.querySelector('#sc-preview-size');
+previewControls.querySelector('#sc-preview-fit').onclick=()=>{preview.style.width='100%';preview.style.maxWidth='100%'};
+previewControls.querySelector('#sc-preview-actual').onclick=()=>{preview.style.width=preview.naturalWidth+'px';preview.style.maxWidth='none'};
+preview.addEventListener('load',()=>{previewSize.textContent=preview.naturalWidth+' ? '+preview.naturalHeight+' pixels'});
+
+let file=null,clipboardImage=null,shareText='',target='';
 let design={heading:'WEEKLY DRIVER ROTA',footer:'Please contact operations about any allocation changes.',header_color:'#142d4e',accent_color:'#146343',row_color:'#edf3fa'};
 const copyButton=overlay.querySelector('#rota-copy-image'),mobileDirect=overlay.querySelector('#rota-mobile-direct');
+const scorecardCopy=document.createElement('button');
+scorecardCopy.type='button';
+scorecardCopy.id='scorecard-copy-only';
+scorecardCopy.textContent='Copy full-resolution image';
+scorecardCopy.style.cssText='background:#17456c;color:white;font-size:15px;padding:12px;flex:1';
+const scorecardOpen=document.createElement('button');
+scorecardOpen.type='button';
+scorecardOpen.id='scorecard-whatsapp-only';
+scorecardOpen.textContent='Open driver WhatsApp';
+scorecardOpen.style.cssText='background:#137b53;color:white;font-size:15px;padding:12px;flex:1';
+const scorecardActions=document.createElement('div');
+scorecardActions.style.cssText='display:none;gap:8px;flex-wrap:wrap;margin:12px 0';
+scorecardActions.append(scorecardCopy,scorecardOpen);
+overlay.querySelector('#rota-share-close').parentElement.after(scorecardActions);
+scorecardCopy.onclick=async()=>{
+ if(!file)return;
+ try{
+  await window.DulogixImageShare.copyPng(clipboardImage||file);
+  status.textContent='Image copied. In the driver chat press Ctrl+V, select HD in the image preview, then Send.';
+  const number=new URL(target).pathname.split('/').filter(Boolean).pop();
+  window.DulogixImageShare.openWhatsApp(number);
+ }catch(e){status.textContent='Unable to copy image: '+e.message}
+};
+scorecardOpen.onclick=()=>{
+ try{const number=new URL(target).pathname.split('/').filter(Boolean).pop();window.DulogixImageShare.openWhatsApp(number)}
+ catch(e){status.textContent='Unable to open WhatsApp: '+e.message}
+};
 const documentActions=document.createElement('div');
 documentActions.id='scorecard-document-actions';
 documentActions.style.cssText='display:none;gap:8px;flex-wrap:wrap;margin-top:12px';
-documentActions.innerHTML='<button type="button" id="scorecard-save-document" style="background:#17456c;color:white;font-size:15px;padding:12px;flex:1">Download original PNG</button><button type="button" id="scorecard-open-chat" style="background:#137b53;color:white;font-size:15px;padding:12px;flex:1">Open driver WhatsApp</button>';
+documentActions.innerHTML='<button type="button" id="scorecard-save-document" style="background:#17456c;color:white;font-size:15px;padding:12px;flex:1">Download original image</button><button type="button" id="scorecard-open-chat" style="background:#137b53;color:white;font-size:15px;padding:12px;flex:1">Open driver WhatsApp</button>';
 overlay.querySelector('#rota-share-close').parentElement.after(documentActions);
 documentActions.querySelector('#scorecard-save-document').onclick=()=>{
  if(!file)return;
  window.DulogixImageShare.downloadPng(file,file.name);
- status.textContent='Original PNG downloaded. In the driver WhatsApp chat, choose Attach > Document, select the downloaded PNG, and press Send. Do not attach it as a photo.';
+ status.textContent='High-quality JPG downloaded. Click Open driver WhatsApp, then Attach > Document and select the JPG to retain its quality.';
 };
 documentActions.querySelector('#scorecard-open-chat').onclick=()=>{
  if(!file)return;
@@ -29,6 +69,19 @@ documentActions.querySelector('#scorecard-open-chat').onclick=()=>{
   window.DulogixImageShare.openWhatsApp(number);
  }catch(e){status.textContent='Unable to open WhatsApp: '+e.message;}
 };
+// One scorecard action row: download, open chat, optional clipboard copy.
+const downloadOriginal=documentActions.querySelector('#scorecard-save-document');
+downloadOriginal.textContent='Download high-quality JPG';
+scorecardActions.append(downloadOriginal);
+scorecardActions.style.flexDirection='column';
+scorecardOpen.remove();
+scorecardActions.style.alignItems='stretch';
+scorecardActions.style.gap='8px';
+scorecardCopy.textContent='Copy image + open driver WhatsApp';
+scorecardCopy.style.background='#e9f0f6';
+scorecardCopy.style.color='#17456c';
+documentActions.remove();
+
 
 const isMobile=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 copyButton.hidden=isMobile;shareButton.hidden=!isMobile;mobileDirect.hidden=!/Android/i.test(navigator.userAgent);
@@ -55,11 +108,11 @@ function createCard(data){
  return canvas;
 }
 async function open(data){
- documentActions.style.display='none';
+ scorecardActions.style.display='none';
  shareButton.hidden=!isMobile;
  copyButton.hidden=isMobile;
  mobileDirect.hidden=!/Android/i.test(navigator.userAgent);
- file=null;status.textContent='Preparing rota card…';shareButton.disabled=true;copyButton.disabled=true;mobileDirect.disabled=true;overlay.style.display='flex';
+ file=null;clipboardImage=null;status.textContent='Preparing rota card…';shareButton.disabled=true;copyButton.disabled=true;mobileDirect.disabled=true;overlay.style.display='flex';
  try{const response=await fetch('/api/rota-card/design',{credentials:'same-origin',cache:'no-store'});if(response.ok)design=await response.json();}catch(e){}
  const canvas=createCard(data);
  const logo=new Image();logo.src='/dulogix-logo.png';
@@ -75,7 +128,7 @@ copyButton.onclick=async()=>{
  if(!file)return;
  try{
   if(!navigator.clipboard?.write||!window.ClipboardItem)throw Error('Image clipboard not supported in this browser. Try Chrome or Edge on desktop.');
-  await window.DulogixImageShare.copyPng(file);
+  await window.DulogixImageShare.copyPng(clipboardImage||file);
   const number=new URL(target).pathname.split('/').filter(Boolean).pop();
   window.DulogixImageShare.openWhatsApp(number);
   status.textContent='Image copied. If your browser asks to open WhatsApp, allow it. In the desktop app press Ctrl+V, check the driver and image, then Send. If the app does not open, launch WhatsApp yourself and find the driver.';
@@ -85,7 +138,7 @@ mobileDirect.onclick=async()=>{
  if(!file)return;
  try{
   if(!navigator.clipboard?.write||!window.ClipboardItem)throw Error('Image clipboard unavailable on this Android browser. Use Share on phone.');
-  await window.DulogixImageShare.copyPng(file);
+  await window.DulogixImageShare.copyPng(clipboardImage||file);
   const number=new URL(target).pathname.split('/').filter(Boolean).pop();
   status.textContent='Image copied. Open the driver chat in WhatsApp, long-press the message box and tap Paste. If WhatsApp cannot paste the image, return here and use Share on phone.';
   window.DulogixImageShare.openWhatsApp(number);
@@ -102,19 +155,21 @@ window.openDulogixPreparedImage=async(data)=>{
  const documentMode=!!data.asDocument;
  const number=window.DulogixImageShare.phone(data.phone);
  if(!number)throw Error('Driver phone number is missing or invalid');
- file=new File([data.blob],data.filename||'Dulogix-report.png',{type:'image/png'});
+ file=new File([data.blob],data.filename||'Dulogix-report.jpg',{type:data.blob.type||'image/jpeg'});
+ clipboardImage=data.clipboardBlob?.type==='image/png'?data.clipboardBlob:null;
  target='https://wa.me/'+number;
  shareText=data.description||data.title||'Dulogix report';
  overlay.querySelector('h2').textContent=data.title||'Share image';
  const old=preview.dataset.blobUrl;if(old)URL.revokeObjectURL(old);
- const url=URL.createObjectURL(file);preview.dataset.blobUrl=url;preview.src=url;
+ const url=URL.createObjectURL(file);preview.dataset.blobUrl=url;preview.src=url;preview.style.width='100%';preview.style.maxWidth='100%';
  overlay.style.display='flex';
- documentActions.style.display=documentMode?'flex':'none';
- shareButton.disabled=documentMode;copyButton.disabled=documentMode;mobileDirect.disabled=documentMode;
- shareButton.hidden=documentMode||!isMobile;
+ scorecardActions.style.display=documentMode?'flex':'none';
+ copyButton.textContent='?? Copy image + open WhatsApp';
+ shareButton.disabled=false;copyButton.disabled=false;mobileDirect.disabled=false;
+ shareButton.hidden=!isMobile;
  copyButton.hidden=documentMode||isMobile;
- mobileDirect.hidden=documentMode||!/Android/i.test(navigator.userAgent);
- status.textContent=documentMode?'Download the original PNG, open the driver WhatsApp chat, then use Attach > Document to send the PNG without photo compression. Confirm sent only after sending.':'Image ready. Copy and open WhatsApp to paste into the driver chat.';
+ mobileDirect.hidden=!/Android/i.test(navigator.userAgent);
+ status.textContent=documentMode?'Click Copy image + open driver WhatsApp. Paste with Ctrl+V, select HD in the image preview, then Send.':'Image ready. Copy and open WhatsApp to paste into the driver chat.';
 };
 
 })();

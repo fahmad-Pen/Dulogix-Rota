@@ -12,7 +12,7 @@
     const form = input.form;
     const status = form.querySelector('.netradyne-save-status');
     const penalty = form.querySelector('[data-penalty="' + input.name + '"]');
-    if (penalty) penalty.value = Number(input.value) > 0 ? -2 : 0;
+    if (penalty) penalty.value = -Math.max(0, Number(input.value) || 0) * (Number(penalty.dataset.multiplier) || 0);
     const total = form.closest('details')?.querySelector('.netradyne-total');
     if (total) {
       const value = Array.from(form.querySelectorAll('[data-penalty]')).reduce(function (sum, field) { return sum + (Number(field.value) || 0); }, 0);
@@ -37,12 +37,14 @@
       next.then(function () {
         if (queues.get(form) === next) {
           status.textContent = 'Saved';
+          try {
           const button = Array.from(document.querySelectorAll('.driver-report-open')).find(b => b.dataset.id === form.elements.namedItem('transporter_id').value);
           if (button) {
             const fields = ['d','fd','ss','speed','tl'];
             const deduction = getter => fields.reduce((sum,k) => {
               const count = Math.max(0,Number(getter(k)) || 0);
-              return sum + (count > 0 ? 2 : 0);
+              const multiplier = Number(form.querySelector('[data-penalty= + k + ]')?.dataset.multiplier) || 0;
+              return sum + count * multiplier;
             },0);
             const oldPenalty = deduction(k => button.dataset['net'+k[0].toUpperCase()+k.slice(1)]);
             const newPenalty = deduction(k => form.elements.namedItem(k).value);
@@ -75,8 +77,10 @@
               });
             }
           }
+          } catch (displayError) { console.warn('Netradyne display refresh failed after successful save', displayError); }
         }
-      }).catch(function () {
+      }).catch(function (error) {
+        console.error('Netradyne autosave request failed', error);
         if (queues.get(form) === next) status.textContent = 'Could not save — please retry editing';
       });
     }, 450));
