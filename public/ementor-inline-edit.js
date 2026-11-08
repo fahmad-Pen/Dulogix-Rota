@@ -1,20 +1,21 @@
 (()=>{
 'use strict';
 const cfg=window.ementorEditConfig;
-if(!cfg)return;
+if(!cfg||!cfg.editable)return;
 document.querySelectorAll('#performance-drivers tbody tr').forEach(row=>{
  const report=row.querySelector('.driver-report-open');
  const scoreCell=row.cells[2];
  if(!report||!scoreCell)return;
  const badge=scoreCell.querySelector('span');
- if(!badge)return;
+ const missing=!badge;
  const input=document.createElement('input');
  input.type='number';input.min='0';input.max='1000';input.step='0.01';
- input.value=report.dataset.fico==='?'?'':report.dataset.fico;
+ input.value=report.dataset.fico && report.dataset.fico.trim()!=='' && Number.isFinite(Number(report.dataset.fico))?report.dataset.fico:'';
  input.dataset.saved=input.value;
  input.setAttribute('aria-label','Ementor score for '+report.dataset.driver);
- input.style.cssText='width:90px;text-align:center;padding:6px 9px;border:1px solid #a8b9cb;border-radius:5px;font-weight:700;background:'+getComputedStyle(badge).backgroundColor+';color:'+getComputedStyle(badge).color;
- badge.replaceWith(input);
+ input.style.cssText='width:90px;text-align:center;padding:6px 9px;border:1px solid #a8b9cb;border-radius:5px;font-weight:700;background:'+(missing?'#f1f5f9':getComputedStyle(badge).backgroundColor)+';color:'+(missing?'#17314e':getComputedStyle(badge).color);
+ input.placeholder='Add score';
+ if(missing)scoreCell.replaceChildren(input);else badge.replaceWith(input);
  const note=document.createElement('div');note.setAttribute('role','status');note.style.cssText='font-size:11px;min-height:14px';input.after(note);
  const save=async()=>{
   if(input.value===input.dataset.saved)return;
