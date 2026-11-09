@@ -20,6 +20,13 @@
 - Keep work within the Dulogix directory and avoid unrelated changes.
 - Before destructive or externally consequential actions, seek confirmation.
 
+## 2a. Mandatory commit checklist - never skip
+- Before any Git commit, reread this file's Git and deployment section.
+- Every commit and PR title MUST follow Conventional Commits: type(scope): imperative description. Use a meaningful scope and one of feat, fix, docs, refactor, test, chore, ci, build, perf.
+- Reject vague or nonconforming subjects such as Improve, Allow, Rename, or unscoped descriptions.
+- Separate unrelated work into focused commits. Run appropriate checks and git diff --check. Never bypass Git hooks without explicit user approval.
+- Only commit when the user explicitly requests it; do not push, merge, or deploy unless separately approved.
+
 ## 3. Git and deployment
 - Primary branches: `develop` (development) and `main` (production). Merge tested changes through a manually approved pull request from `develop` into `main`.
 - Follow Conventional Commits for all new commits and PR titles: `type(scope): concise imperative description` (scope optional). Types include `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `ci`, `build`, and `perf`.

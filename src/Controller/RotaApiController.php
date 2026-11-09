@@ -47,7 +47,7 @@ final class RotaApiController extends AbstractController
         $field = $data['field'] ?? '';
         $day = $data['day'] ?? null;
         $value = $data['value'] ?? null;
-        $planning = ['Route Target', 'Current Demand Signal', 'ECP', 'Required drivers', 'DA Capacity', 'Standby'];
+        $planning = ['Route Target', 'Current Demand Signal', 'ECP', 'Required drivers', 'DA Capacity'];
         $codes = array_map(static fn(RotaAllocationOption $o) => $o->code, $em->getRepository(RotaAllocationOption::class)->findBy(['active' => true]));
         $codes[] = '';
         $statusCodes = array_map(static fn(RotaStatusOption $o) => $o->code, $em->getRepository(RotaStatusOption::class)->findBy(['active' => true]));
