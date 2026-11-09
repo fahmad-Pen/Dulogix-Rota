@@ -9,7 +9,7 @@ use Symfony\Component\Routing\Attribute\Route;
 
 #[Route('/api/rota/{week}/targets',requirements:['week'=>'\\d{4}-\\d{2}-\\d{2}'])]
 final class RotaTargetController extends AbstractController {
- private const FIELDS=['Route Target','Current Demand Signal','ECP','Required drivers','DA Capacity','Standby'];
+ private const FIELDS=['Route Target','Current Demand Signal','ECP','Required drivers','DA Capacity'];
  private function week(string $week):?\DateTimeImmutable {
   $d=\DateTimeImmutable::createFromFormat('!Y-m-d',$week,new \DateTimeZone('Europe/London'));
   return $d&&$d->format('Y-m-d')===$week&&$d->format('N')==='1'?$d:null;
