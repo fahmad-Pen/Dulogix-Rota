@@ -13,6 +13,7 @@ final class DriverScorecardDistributionController extends AbstractController {
  #[Route('/api/driver-performance/{week}/distribution',methods:['GET'])]
  public function list(string $week,EntityManagerInterface $em): JsonResponse {
   $this->denyAccessUnlessGranted('ROLE_OPERATIONS');
+  if (SectionAccess::performanceLevel($this->getUser()) === 'none') throw $this->createAccessDeniedException('Driver Performance access is not assigned.');
   if(!$this->validWeek($week))return $this->json(['error'=>'Invalid week'],422);
   $result=[];
   foreach($em->getRepository(User::class)->findAll() as $driver){
@@ -26,6 +27,7 @@ final class DriverScorecardDistributionController extends AbstractController {
  #[Route('/api/driver-performance/{week}/distribution/{id}',requirements:['id'=>'\\d+'],methods:['POST'])]
  public function confirm(string $week,int $id,Request $request,EntityManagerInterface $em): JsonResponse {
   $this->denyAccessUnlessGranted('ROLE_OPERATIONS');
+  if (SectionAccess::performanceLevel($this->getUser()) === 'none') throw $this->createAccessDeniedException('Driver Performance access is not assigned.');
   if(!$this->validWeek($week))return $this->json(['error'=>'Invalid week'],422);
   if(!$this->isCsrfTokenValid('scorecard_distribution',(string)$request->headers->get('X-CSRF-Token')))return $this->json(['error'=>'Invalid CSRF token'],403);
   $driver=$em->getRepository(User::class)->find($id);

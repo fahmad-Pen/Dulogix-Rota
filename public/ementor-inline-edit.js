@@ -1,3 +1,4 @@
+(()=>{const style=document.createElement('style');style.textContent='input.ementor-score-input::-webkit-inner-spin-button,input.ementor-score-input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}input.ementor-score-input{-moz-appearance:textfield;appearance:textfield}';document.head.append(style)})();
 (()=>{
 'use strict';
 const cfg=window.ementorEditConfig;
@@ -9,12 +10,13 @@ document.querySelectorAll('#performance-drivers tbody tr').forEach(row=>{
  const badge=scoreCell.querySelector('span');
  const missing=!badge;
  const input=document.createElement('input');
- input.type='number';input.min='0';input.max='1000';input.step='0.01';
+ input.type='number';input.className='ementor-score-input';input.min='0';input.max='850';input.step='0.01';
  input.value=report.dataset.fico && report.dataset.fico.trim()!=='' && Number.isFinite(Number(report.dataset.fico))?report.dataset.fico:'';
  input.dataset.saved=input.value;
  input.setAttribute('aria-label','Ementor score for '+report.dataset.driver);
- input.style.cssText='width:90px;text-align:center;padding:6px 9px;border:1px solid #a8b9cb;border-radius:5px;font-weight:700;background:'+(missing?'#f1f5f9':getComputedStyle(badge).backgroundColor)+';color:'+(missing?'#17314e':getComputedStyle(badge).color);
- input.placeholder='Add score';
+ input.style.cssText='width:56px;max-width:100%;box-sizing:border-box;font-size:13px;text-align:center;padding:6px 5px;border:1px solid #a8b9cb;border-radius:5px;font-weight:700;background:'+(missing?'#f1f5f9':getComputedStyle(badge).backgroundColor)+';color:'+(missing?'#17314e':getComputedStyle(badge).color);
+ input.placeholder='Add';input.title='Ementor score (0?850)';
+ input.style.appearance='textfield';input.style.MozAppearance='textfield';
  if(missing)scoreCell.replaceChildren(input);else badge.replaceWith(input);
  const note=document.createElement('div');note.setAttribute('role','status');note.style.cssText='font-size:11px;min-height:14px';input.after(note);
  const save=async()=>{

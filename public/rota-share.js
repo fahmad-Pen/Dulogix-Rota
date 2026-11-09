@@ -35,6 +35,7 @@ scorecardOpen.type='button';
 scorecardOpen.id='scorecard-whatsapp-only';
 scorecardOpen.textContent='Open driver WhatsApp';
 scorecardOpen.style.cssText='background:#137b53;color:white;font-size:15px;padding:12px;flex:1';
+let preparedOnCopied=null;
 const scorecardActions=document.createElement('div');
 scorecardActions.style.cssText='display:none;gap:8px;flex-wrap:wrap;margin:12px 0';
 scorecardActions.append(scorecardCopy,scorecardOpen);
@@ -45,6 +46,9 @@ scorecardCopy.onclick=async()=>{
   await window.DulogixImageShare.copyPng(clipboardImage||file);
   status.textContent='Image copied. In the driver chat press Ctrl+V, select HD in the image preview, then Send.';
   const number=new URL(target).pathname.split('/').filter(Boolean).pop();
+  // Copy has succeeded: close the preview and restore the report confirmation screen.
+  if(typeof preparedOnCopied==='function')preparedOnCopied();
+  overlay.querySelector('#rota-share-close').click();
   window.DulogixImageShare.openWhatsApp(number);
  }catch(e){status.textContent='Unable to copy image: '+e.message}
 };
@@ -86,6 +90,7 @@ documentActions.remove();
 const isMobile=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 copyButton.hidden=isMobile;shareButton.hidden=!isMobile;mobileDirect.hidden=!/Android/i.test(navigator.userAgent);
 overlay.querySelector('#rota-share-close').onclick=()=>{overlay.style.display='none'};
+const shareStyle=document.createElement('style');shareStyle.textContent='#rota-share-overlay.scorecard-share-mode>div{width:min(720px,100%)!important;padding:24px!important;border-radius:18px!important;box-shadow:0 22px 80px #0004}#rota-share-overlay.scorecard-share-mode h2{font-size:21px;color:#143e61;margin-bottom:16px!important}#rota-share-overlay.scorecard-share-mode #rota-share-status{font-size:14px;line-height:1.5;color:#395671;background:#f0f6fb;padding:12px;border-radius:9px}#rota-share-overlay.scorecard-share-mode #rota-share-preview{border:0!important}#rota-share-overlay.scorecard-share-mode #scorecard-document-actions button,#rota-share-overlay.scorecard-share-mode #rota-share-close,#rota-share-overlay.scorecard-share-mode #rota-copy-image,#rota-share-overlay.scorecard-share-mode #rota-mobile-direct{border-radius:9px!important;font-weight:700}#rota-share-overlay.scorecard-share-mode #rota-share-close{padding:10px 16px!important;border:1px solid #b5cce0;background:#fff;color:#17456c}#rota-share-overlay.scorecard-share-mode #scorecard-document-actions{gap:12px!important}';document.head.append(shareStyle);
 function round(ctx,x,y,w,h,r){ctx.beginPath();ctx.roundRect(x,y,w,h,r);ctx.fill()}
 function createCard(data){
  const canvas=document.createElement('canvas');canvas.width=900;canvas.height=1170;
@@ -152,6 +157,7 @@ shareButton.onclick=async()=>{
 };
 window.openDulogixRotaCard=open;
 window.openDulogixPreparedImage=async(data)=>{
+ preparedOnCopied=typeof data.onCopied==='function'?data.onCopied:null;
  const documentMode=!!data.asDocument;
  const number=window.DulogixImageShare.phone(data.phone);
  if(!number)throw Error('Driver phone number is missing or invalid');
@@ -163,6 +169,7 @@ window.openDulogixPreparedImage=async(data)=>{
  const old=preview.dataset.blobUrl;if(old)URL.revokeObjectURL(old);
  const url=URL.createObjectURL(file);preview.dataset.blobUrl=url;preview.src=url;preview.style.width='100%';preview.style.maxWidth='100%';
  overlay.style.display='flex';
+ overlay.classList.toggle('scorecard-share-mode',documentMode);
  scorecardActions.style.display=documentMode?'flex':'none';
  copyButton.textContent='?? Copy image + open WhatsApp';
  shareButton.disabled=false;copyButton.disabled=false;mobileDirect.disabled=false;
