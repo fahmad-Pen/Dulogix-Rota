@@ -2,11 +2,39 @@
 namespace App\Controller;
 use App\Entity\User;
 final class SectionAccess {
-    public const SECTIONS = ['rota' => 'Rota Management', 'vehicle' => 'Vehicle Management', 'operations' => 'Operations', 'performance_read' => 'Driver Performance (Read Only)', 'performance_full' => 'Driver Performance (Full Access)'];
+    public const SECTIONS = ['rota' => 'Rota Management (Legacy Full Access)', 'rota_read' => 'Rota Management (Read Only)', 'rota_full' => 'Rota Management (Full Access)', 'vehicle' => 'Vehicle Management (Legacy Full Access)', 'vehicle_read' => 'Vehicle Management (Read Only)', 'vehicle_full' => 'Vehicle Management (Full Access)', 'operations' => 'Operations (Legacy Full Access)', 'operations_read' => 'Operations (Read Only)', 'operations_full' => 'Operations (Full Access)', 'performance_read' => 'Driver Performance (Read Only)', 'performance_full' => 'Driver Performance (Full Access)'];
+    public static function level(?User $user, string $section): string {
+        if (!$user || !in_array($section, ['rota', 'vehicle', 'operations'], true)) return 'none';
+        if (in_array('ROLE_ADMIN', $user->getRoles(), true)) return 'full';
+        if (!in_array('ROLE_MANAGER', $user->getRoles(), true)) return 'none';
+        $sections = $user->getSections();
+        if (in_array($section.'_full', $sections, true) || in_array($section, $sections, true)) return 'full';
+        return in_array($section.'_read', $sections, true) ? 'read' : 'none';
+    }
+    public static function canEdit(?User $user, string $section): bool {
+        return self::level($user, $section) === 'full';
+    }
+    public static function submittedSections(\Symfony\Component\HttpFoundation\Request $request): array {
+        $sections = [];
+        foreach (['rota', 'vehicle', 'operations', 'performance'] as $section) {
+            $value = (string) $request->request->get($section.'_access', 'none');
+            if (in_array($value, [$section.'_read', $section.'_full'], true)) $sections[] = $value;
+        }
+        return $sections;
+    }
+    public static function accessSelect(string $section, array $sections): string {
+        $label = ['rota'=>'Rota Management', 'vehicle'=>'Vehicle Management', 'operations'=>'Operations'][$section];
+        $current = in_array($section.'_full', $sections, true) || in_array($section, $sections, true) ? $section.'_full' : (in_array($section.'_read', $sections, true) ? $section.'_read' : 'none');
+        $html = '<label style="display:flex;align-items:center;gap:12px;margin-top:12px">'.$label.' <select name="'.$section.'_access" style="width:auto">';
+        foreach (['none'=>'No access', $section.'_read'=>'Read Only', $section.'_full'=>'Full Access'] as $value=>$name) {
+            $html .= '<option value="'.$value.'"'.($current===$value?' selected':'').'>'.$name.'</option>';
+        }
+        return $html.'</select></label>';
+    }
     public static function allowed(?User $user, string $section): bool {
         if (!$user || !isset(self::SECTIONS[$section])) return false;
         if (in_array('ROLE_ADMIN', $user->getRoles(), true)) return true;
-        return in_array('ROLE_MANAGER', $user->getRoles(), true) && in_array($section, $user->getSections(), true);
+        return in_array($section, ['rota','vehicle','operations'], true) ? self::level($user, $section) !== 'none' : (in_array('ROLE_MANAGER', $user->getRoles(), true) && in_array($section, $user->getSections(), true));
     }
     public static function performanceLevel(?User $user): string {
         if (!$user) return 'none';
