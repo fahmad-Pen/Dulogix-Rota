@@ -14,26 +14,26 @@ window.addEventListener('beforeprint',()=>{
 });
 document.querySelectorAll('form.entry').forEach(form=>{
  const score=form.elements.fisco_score,returns=form.elements.returns_count;
- if(!score||!returns)return;
+ if(!score)return;
  const save=async()=>{
-  const s=score.value.trim(),n=returns.value.trim(),status=form.querySelector('.save-state');
-  if((s!==''&&(!/^\d{1,3}$/.test(s)||Number(s)>850))||(n!==''&&!/^\d{1,3}$/.test(n))){status.textContent='Invalid FICO/returns';return}
-  score.disabled=returns.disabled=true;status.textContent='Saving score?';
+  const s=score.value.trim(),n=returns&&!returns.disabled?returns.value.trim():null,status=form.querySelector('.save-state');
+  if((s!==''&&(!/^\d{1,3}$/.test(s)||Number(s)>850))||(n!==null&&n!==''&&!/^\d{1,3}$/.test(n))){status.textContent='Invalid FICO/returns';return}
+  score.disabled=true;if(returns)returns.disabled=true;status.textContent='Saving…';
   const body=new FormData();
   body.set('_token',form.elements._token.value);
   body.set('driver_id',form.elements.driver_id.value);
   body.set('action','score_override');
-  body.set('fisco_score',s);body.set('returns_count',n);
+  body.set('fisco_score',s);if(n!==null)body.set('returns_count',n);
   try{
    const response=await fetch(location.pathname+location.search,{method:'POST',headers:{'X-Requested-With':'XMLHttpRequest'},body,credentials:'same-origin'});
    const result=await response.json();
    if(!response.ok||!result.ok)throw Error(result.error||'Unable to save');
-   status.textContent='Score saved ?';
+   status.textContent='Saved ✓';
   }catch(error){status.textContent=error.message;status.classList.add('error')}
-  finally{score.disabled=returns.disabled=false}
+  finally{score.disabled=false;if(returns&&!returns.dataset.ficoOnly)returns.disabled=false}
  };
  let timer;
- for(const el of [score,returns]){
+ for(const el of [score,returns].filter(Boolean)){
   el.addEventListener('change',()=>{clearTimeout(timer);save()});
  }
 });

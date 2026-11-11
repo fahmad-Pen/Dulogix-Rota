@@ -67,3 +67,15 @@ See [RETENTION_POLICY.md](RETENTION_POLICY.md) for the broader data retention sc
 - Only the latest confirmation snapshot per driver/week is stored (manager, timestamp and allocation fingerprint). **Do not introduce a detailed rota-change audit** for distribution.
 - General WhatsApp drafts and rota image cards are separate workflows. The card is copied/pasted or shared by the manager, never automatically sent.
 - Local implementation only; not deployed to production.
+
+## Daily LANE PLAN Excel import (local, 2026-11-10)
+
+- Operations Full Access managers may upload an Excel `.xlsx` file (maximum 15 MB) to the selected date on the Operations Report page. The importer reads only the **LANE PLAN** worksheet and requires the column headers `COLOR`, `HOLDING LANE TIME`, `STG. LOCATION`, `ROUTE`, and `ASSIGNED DA` in columns C, D, G, H and I.
+- `ASSIGNED DA` is matched to the existing driver `transporter_id` (case-insensitive normalization). The report shows Color, Holding, STG and Route immediately after Start Time. Import data is read-only for all users with Operations page access.
+- Records are stored per report date in `operations_lane_plan`; uploading another valid file replaces that date's entire previous import in a transaction. Unmatched IDs are reported to the uploader, not inserted. At least one active driver must match. Other dates and existing Operations values are unaffected.
+- Upload is restricted server-side to Operations Full Access, protected by the Operations CSRF token; Performance Full + Operations Read Only cannot upload. No Google account integration is required.
+- Local migration `Version20261110140000` was applied to the development database. Excel reader synthetic test `tests/lane_plan_reader.php`, PHP syntax and Symfony container lint passed. Real uploaded workbook import and authenticated browser layout are **not yet end-to-end verified**. Do not deploy before verifying the sample report in the app.
+
+### Blank manager FICO / returns values (2026-11-10)
+
+On Operations, a manager may leave or clear the FICO score and returns fields. Empty values are stored as SQL NULL (not zero), and no validation error is raised. Clearing a manager FICO override falls back to the driver's submitted score if one exists; clearing a manager-only FICO score leaves no effective score for that day. Audit history records FICO clears with nullable `new_score` (`Version20261110234500`, applied locally). FICO remains 0–850 and returns 0–999 when populated. Transactional regression tests cover blank persistence and clearing audit. Browser verification pending.
