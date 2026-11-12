@@ -87,7 +87,7 @@ final class RotaDeadlinesController extends AbstractController {
   $followup=$em->getRepository(AppSetting::class)->find('rota_followup_sent_'.$week->format('Y-m-d'));
   $followupSent=$followup?json_decode($followup->value,true):null;
   $checks=[];foreach(['availability','completion','distribution'] as $action){$item=$em->getRepository(AppSetting::class)->find('rota_action_'.$action.'_'.$week->format('Y-m-d'));$checks[$action]=$item?json_decode($item->value,true):null;}
-  return $this->json(['week'=>$week->format('Y-m-d'),'deadlines'=>$deadlines,'warningHours'=>(int)$config['warning'],'message'=>$config['message'],'broadcastSent'=>$sent,'followupSent'=>$followupSent,'checks'=>$checks,'canOverride'=>$this->isGranted('ROLE_ADMIN'),'total'=>count($drivers),'submitted'=>$completed,'partial'=>$partial,'outstanding'=>$outstanding,'fullyAllocated'=>$allocated,'availabilityDeadline'=>$availabilityDeadline->format(DATE_ATOM)])->setPrivate()->setMaxAge(0);
+  return $this->json(['week'=>$week->format('Y-m-d'),'deadlines'=>$deadlines,'warningHours'=>(int)$config['warning'],'message'=>$config['message'],'broadcastSent'=>$sent,'followupSent'=>$followupSent,'checks'=>$checks,'canEdit'=>SectionAccess::canEdit($this->getUser(),'rota'),'canOverride'=>$this->isGranted('ROLE_ADMIN'),'total'=>count($drivers),'submitted'=>$completed,'partial'=>$partial,'outstanding'=>$outstanding,'fullyAllocated'=>$allocated,'availabilityDeadline'=>$availabilityDeadline->format(DATE_ATOM)])->setPrivate()->setMaxAge(0);
  }
  private function selectedWeek(Request $request, \DateTimeImmutable $now): \DateTimeImmutable {
   $raw=(string)($request->query->get('week') ?: $request->request->get('week', ''));
@@ -99,6 +99,7 @@ final class RotaDeadlinesController extends AbstractController {
  #[Route('/api/rota/deadlines/check',name:'api_rota_deadline_check',methods:['POST'])]
  public function check(Request $request,EntityManagerInterface $em,RotaWeekLock $lock): Response {
   $this->denyAccessUnlessGranted('ROLE_OPERATIONS');
+  if(!SectionAccess::canEdit($this->getUser(),'rota'))return $this->json(['error'=>'Rota is read-only for this account'],403);
   if(!$this->isCsrfTokenValid('rota_edit',(string)$request->headers->get('X-CSRF-Token')))throw $this->createAccessDeniedException();
   $action=(string)$request->request->get('action');
   if(!in_array($action,['availability','completion','distribution'],true))return $this->json(['error'=>'Invalid action'],422);
@@ -117,6 +118,7 @@ final class RotaDeadlinesController extends AbstractController {
  #[Route('/api/rota/deadlines/broadcast-sent',name:'api_rota_broadcast_sent',methods:['POST'])]
  public function sent(Request $request,EntityManagerInterface $em,RotaWeekLock $lock): Response {
   $this->denyAccessUnlessGranted('ROLE_OPERATIONS');
+  if(!SectionAccess::canEdit($this->getUser(),'rota'))return $this->json(['error'=>'Rota is read-only for this account'],403);
   if(!$this->isCsrfTokenValid('rota_edit',(string)$request->headers->get('X-CSRF-Token')))throw $this->createAccessDeniedException();
   $tz=new \DateTimeZone('Europe/London');$selected=$this->selectedWeek($request,new \DateTimeImmutable('now',$tz));if(!$lock->canEdit($selected,$this->getUser()->getId()))return $this->json(['error'=>'Historical week locked'],423);$week=$selected->format('Y-m-d');
   $stage=(string)$request->request->get('stage','broadcast');if(!in_array($stage,['broadcast','outstanding'],true))return $this->json(['error'=>'Invalid reminder stage'],422);
