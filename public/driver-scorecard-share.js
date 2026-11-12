@@ -39,6 +39,30 @@ async function imageFromReport(){
   }
  });
 
+ // Export is 2048px wide and fonts are enlarged 4x; scale the POD detail table too.
+ const podTable=mobile.querySelector('.sc-pod-reasons');
+ if(podTable){
+  podTable.style.setProperty('width','1120px','important');
+  podTable.style.setProperty('max-width','100%','important');
+  podTable.style.setProperty('margin-left','65px','important');
+  podTable.querySelectorAll('th').forEach(cell=>{
+   cell.style.setProperty('font-size','38px','important');
+   cell.style.setProperty('line-height','1.2','important');
+   cell.style.setProperty('white-space','normal','important');
+   cell.style.setProperty('word-break','normal','important');
+   cell.style.setProperty('overflow-wrap','normal','important');
+   cell.style.setProperty('padding','0 8px','important');
+  });
+  podTable.querySelectorAll('td').forEach(cell=>{
+   cell.style.setProperty('font-size','44px','important');
+   cell.style.setProperty('padding','12px 8px 0','important');
+  });
+ }
+ // Preserve visible hierarchy for indented metric labels in the shared image.
+ mobile.querySelectorAll('.sc-line>span[style*="padding-left"]').forEach(label=>{
+  label.style.setProperty('padding-left','85px','important');
+ });
+
  mobile.querySelectorAll('.sc-line small,.sc-progress small').forEach(el=>{el.style.setProperty('font-size','54px','important');el.style.setProperty('white-space','nowrap','important');});
  mobile.querySelectorAll('.sc-focus-line b').forEach(el=>{el.style.setProperty('min-width','0','important');});
  // Keep short focus labels on one line, regardless of the original 4x typography scaling.

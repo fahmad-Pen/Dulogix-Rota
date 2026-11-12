@@ -4,7 +4,7 @@ const esc=s=>String(s??'—').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>'
 const fmt=(x,suffix='')=>x===''||x==='—'||x===undefined||x===null?'Not available':esc(typeof x==='number'||/^-?\d+\.\d+$/.test(String(x))?String(x).replace(/(\.\d*?)0+$/,'$1').replace(/\.$/,''):x)+suffix;
 const line=(name,value,notes='')=>'<div class="sc-line"><span>'+name+'</span><strong>'+fmt(value)+'</strong>'+(notes?'<small>'+notes+'</small>':'')+'</div>';
 const safetyLine=(name,value,score,color)=>'<div class="sc-line"><span>'+esc(name)+'</span><strong class="sc-metric" style="background:'+color+'">'+fmt(value)+'</strong><small>'+esc(score)+'</small></div>';
-const metric=(name,value,rule,award='',maximum=null)=>{const n=Number(value),valid=value!==undefined&&value!==''&&value!=='N/A'&&Number.isFinite(n);const shade=!valid?'#edf3f8':rule(n)==='green'?'#c9f2d5':rule(n)==='amber'?'#fff0bf':'#ffe2e6';return safetyLine(name,valid?value:'N/A',maximum===null?'':(award===''||award==='N/A'?'N/A':award+'%')+' / '+maximum+'%',shade)};
+const metric=(name,value,rule,award='',maximum=null,displayValue=value)=>{const n=Number(value),valid=value!==undefined&&value!==''&&value!=='N/A'&&Number.isFinite(n);const shade=!valid?'#edf3f8':rule(n)==='green'?'#c9f2d5':rule(n)==='amber'?'#fff0bf':'#ffe2e6';return safetyLine(name,valid?displayValue:'N/A',maximum===null?'':(award===''||award==='N/A'?'N/A':award+'%')+' / '+maximum+'%',shade)};
 const high=(green,red)=>n=>n>=green?'green':n>=red?'amber':'red';
 const low=(green,red)=>n=>n<=green?'green':n<=red?'amber':'red';
 const zero=n=>n===0?'green':'red';
@@ -62,32 +62,35 @@ const deliveryGaps=deliveryScored.filter(([,earned,possible])=>valid(earned)&&Nu
 const deliveryPerformance=performanceBar(deliveryScored.map(([,earned,possible])=>[earned,possible]))+
 (deliveryGaps.length?'<div class="sc-safety-deduction"><b>Points available to improve</b>'+deliveryGaps.map(([name,earned,possible])=>'<div>'+esc(name)+': '+(possible-Number(earned)).toFixed(1)+' pts available</div>').join('')+'</div>':'');
 const metricLabel=(key,fallback)=>config.metricLabels?.[key]||fallback;
+const countDisplay=value=>value!==undefined&&value!==null&&value!==''&&value!=='N/A'&&Number.isFinite(Number(value))?Math.round(Number(value)):'N/A';
+const indentRow=(key,html)=>layout.indents?.[key]?html.replace('<span>','<span style="padding-left:20px">'):html;
 const safetyMetrics={
 fico:safetyLine(metricLabel('fico','Safe Driving Metric (FICO / Ementor)'),x.fico,x.ficoPercent==='N/A'?'N/A':x.ficoPercent+'% / 20%',x.ficoColor||'#edf3f8'),
 ...Object.fromEntries([['netSpeed','Speeding Event Rate (Netradyne Violation)'],['netD','Distraction Rate (Netradyne Violation)'],['netFd','Following Distance Rate (Netradyne Violation)'],['netSs','Sign Signal Rate (Netradyne Violation)'],['netTl','Traffic Light Rate (Netradyne Violation)']].map(([key,label])=>{const value=x[key];return [key,safetyLine(metricLabel(key,label),value,value==='N/A'?'':Number(value)===0?'':'-2%',value==='N/A'?'#edf3f8':Number(value)===0?'#c9f2d5':'#ffe2e6')]}))
 };
-const qtyRow=(key,value,dpmo,rule)=>{const validQty=value!==undefined&&value!==''&&value!=='N/A'&&Number.isFinite(Number(value));if(!validQty)return '';const n=Number(value);const shade=rule(Number(dpmo))==='green'?'#c9f2d5':rule(Number(dpmo))==='amber'?'#fff0bf':'#ffe2e6';const formatted=n.toFixed(2).replace(/\.00$/,'').replace(/(\.\d)0$/,'$1');return '<div class="sc-line"><span>'+esc(metricLabel(key,'Qty'))+'</span><strong class="sc-metric" style="background:'+shade+';font-weight:400;font-size:15px">'+formatted+'</strong><small></small></div>';};
+const podReasons=[['Blurry photo',x.podBlurryPhoto],['No package',x.podNoPackage],['Package in car',x.podPackageInCar],['Package too close',x.podPackageTooClose],['Photo too dark',x.podPhotoTooDark]];
+const podReasonGrid='<div class="sc-pod-reasons" style="width:320px;max-width:100%;box-sizing:border-box;padding:7px 0 9px;border-bottom:1px solid #e0e7ee"><table style="width:100%;table-layout:fixed;border-collapse:collapse"><tbody><tr>'+podReasons.map(([label])=>'<th style="width:20%;padding:0 2px;font-size:10px;font-weight:400;text-align:center;line-height:1.2;white-space:normal;overflow-wrap:normal;word-break:normal;color:#526a82;vertical-align:bottom">'+esc(label.split(' ')[0])+'<br>'+esc(label.split(' ').slice(1).join(' '))+'</th>').join('')+'</tr><tr>'+podReasons.map(([,value])=>'<td style="width:20%;padding:5px 2px 0;text-align:center;font-size:12px;font-weight:700;color:#245d82">'+fmt(value)+'</td>').join('')+'</tr></tbody></table></div>';
 const deliveryMetrics={
 ce:metric(metricLabel('ce','Customer Escalation (CE)'),x.ce,zero,x.ceAward,15),
-cdf:metric(metricLabel('cdf','Customer Delivery Feedback (Negative Feedback)'),x.cdf,low(5377,8000),x.cdfAward,5)+qtyRow('cdfQty',x.negativeFeedbackQty,x.cdf,low(5377,8000)),
+cdf:metric(metricLabel('cdf','Customer Delivery Feedback (Negative Feedback)'),x.cdf,low(5377,8000),x.cdfAward,5,countDisplay(x.negativeFeedbackQty)),
 dwc:metric(metricLabel('dwc','Delivery Workflow Compliance (DWC)'),x.dwc,high(95,90),x.dwcAward,10),
 iadc:metric(metricLabel('iadc','IADC'),x.iadc,high(70,60)),
 pod:metric(metricLabel('pod','Photo on Delivery (POD)'),x.pod,high(99.1,97),x.podAward,10),
 podBypass:metric(metricLabel('podBypass','  By Pass'),x.podBypass,zero),
-podRejects:metric(metricLabel('podRejects','  Rejects'),x.podRejects,zero),
+podRejects:metric(metricLabel('podRejects','  Rejects'),x.podRejects,zero)+podReasonGrid,
 cc:metric(metricLabel('cc','Contact Compliance (CC)'),x.cc,high(99.1,97),x.ccAward,15),
 contactMade:safetyLine(metricLabel('contactMade','Contact Made'),x.contactMade,'' ,'#edf3f8'),
 contactsMissed:safetyLine(metricLabel('contactsMissed','Contacts Missed'),x.contactsMissed,'' ,'#edf3f8'),
-dpmo:metric(metricLabel('dpmo','Delivery Success Conditions (DSC DPMO)'),x.dpmo,low(550,1000),x.dpmoAward,20)+qtyRow('dpmoQty',x.qty,x.dpmo,low(550,1000)),
+dpmo:metric(metricLabel('dpmo','Delivery Success Conditions (DSC DPMO)'),x.dpmo,low(550,1000),x.dpmoAward,20,countDisplay(x.qty)),
 dcr:metric(metricLabel('dcr','Delivery Completion Rate (DCR)'),x.dcr,high(100,95)),
 lor:metric(metricLabel('lor','Lost on Road (LOR) DPMO'),x.lorDpmo,zero),
 psb:metric(metricLabel('psb','Pickup Success Behaviours (PSB Collection Fails)'),x.psb,zero,x.psbAward,5)
 };
 content.innerHTML=css+'<article class="sc-page"><div class="sc-brand"><img src="/dulogix-logo.png" alt="Dulogix"><div class="sc-meta"><b>'+esc(week)+'</b><div>Individual Driver Performance</div></div></div><h1 class="sc-title">'+esc(layout.title||'DA WEEKLY QUALITY REPORT')+'</h1><div class="sc-driver-heading"><h2>'+esc(x.driver)+'</h2></div><div class="sc-overall"><div><b>Overall Score</b><div class="sc-rank-row">'+rankTrophy+'Rank '+esc(x.rank)+'</div></div><div class="sc-score-side"><div class="sc-score-wow">'+rankBadge+'</div><div class="sc-score-value"><strong>'+fmt(x.score)+' / 100</strong><div><span class="sc-status" style="background:'+(!Number.isFinite(Number(x.score))?'#edf3f8':Number(x.score)<40?'#fad9df':Number(x.score)<70?'#fff0bf':Number(x.score)<85?'#dcebfa':Number(x.score)<93.5?'#ddf2e7':'#bfe8d0')+'">'+esc(x.status.replaceAll('_', ' '))+'</span></div></div></div></div>'+
 '<div class="sc-grading-legend"><span class="grade-poor">Poor &lt;40%</span><i>|</i><span class="grade-fair">Fair 40-69.99%</span><i>|</i><span class="grade-great">Great 70-84.99%</span><i>|</i><span class="grade-fantastic">Fantastic 85-93.49%</span><i>|</i><span class="grade-plus">Fantastic Plus 93.5%+</span></div><div class="sc-category-grid"><div class="sc-left-column">'+
-section(esc(layout.safety||'Safety'),performanceBar(safety)+(net>0?'<div class="sc-safety-deduction">FICO earned: '+fmt(x.ficoPercent)+' / 20; Netradyne: -'+(2*net)+' pts. Deductions beyond Safety reduce the overall score.</div>':'')+'<div class="sc-safety">'+(config.safetyOrder||Object.keys(safetyMetrics)).map(key=>safetyMetrics[key]||'').join('')+'</div>')+
+section(esc(layout.safety||'Safety'),performanceBar(safety)+(net>0?'<div class="sc-safety-deduction">FICO earned: '+fmt(x.ficoPercent)+' / 20; Netradyne: -'+(2*net)+' pts. Deductions beyond Safety reduce the overall score.</div>':'')+'<div class="sc-safety">'+(config.safetyOrder||Object.keys(safetyMetrics)).map(key=>indentRow(key,safetyMetrics[key]||'')).join('')+'</div>')+
 focusHtml+'</div>'+
-section(esc(layout.delivery||'Delivery Quality & Standard Work Compliance'),deliveryPerformance+'<div class="sc-safety">'+(layout.order||Object.keys(deliveryMetrics)).map(key=>deliveryMetrics[key]||'').join('')+'</div>')+
+section(esc(layout.delivery||'Delivery Quality & Standard Work Compliance'),deliveryPerformance+'<div class="sc-safety">'+(layout.order||Object.keys(deliveryMetrics)).map(key=>indentRow(key,deliveryMetrics[key]||'')).join('')+'</div>')+
 '</div>'+
 (explanationOverride||'')+'</article>';
 dialog.showModal();

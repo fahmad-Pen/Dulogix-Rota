@@ -11,20 +11,21 @@ const selectedWeek=()=>monday().toISOString().slice(0,10);
 window.addEventListener('rota-week-changed',()=>load());
 const record=key=>key==='broadcast'?data.broadcastSent:key==='outstanding'?data.followupSent:data.checks?.[key];
 function render(){
- const now=Date.now(),pending=data.outstanding.length+data.partial.length;
+ const now=Date.now(),pending=data.outstanding.length+data.partial.length,canEdit=Boolean(data.canEdit);
  let rows='';
  for(const key of order){
   const v=data.deadlines[key];if(!v?.enabled)continue;
   const rec=record(key),due=new Date(v.at).getTime(),late=rec&&new Date(rec.at).getTime()>due;
   const status=rec?(late?'Completed late':'Completed'):now>due?'Overdue':due-now<=data.warningHours*3600000?'Due soon':'Scheduled';
   const locked=false;
-  rows+='<div style="display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid #e4eaf1"><input type="checkbox" data-check="'+key+'" '+(rec?'checked ':'')+'style="width:18px;height:18px;margin-top:3px"><div><strong>'+(rec?'✅':now>due?'🔴':'📅')+' '+esc(names[key])+'</strong> <small>· '+fmt(v.at)+'</small><div style="font-size:12px;color:#62758a">'+status+(rec?' · '+esc(rec.manager)+' · '+fmt(rec.at):locked?' · Available at scheduled time':'')+'</div></div></div>';
+  rows+='<div style="display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid #e4eaf1"><input type="checkbox" data-check="'+key+'" '+(rec?'checked ':'')+(canEdit?'':'disabled ')+'style="width:18px;height:18px;margin-top:3px"><div><strong>'+(rec?'✅':now>due?'🔴':'📅')+' '+esc(names[key])+'</strong> <small>· '+fmt(v.at)+'</small><div style="font-size:12px;color:#62758a">'+status+(rec?' · '+esc(rec.manager)+' · '+fmt(rec.at):locked?' · Available at scheduled time':'')+'</div></div></div>';
  }
  let copies='';
  for(const key of ['broadcast','outstanding'])if(data.deadlines[key]?.enabled)copies+='<button type="button" data-copy="'+key+'" style="margin:8px 8px 8px 0">📋 Copy '+(key==='broadcast'?'initial message':'final reminder')+'</button>';
  copies+='<button type="button" data-copy="next-week" style="margin:8px 8px 8px 0">Request availability - '+esc(new Date(Date.parse(data.week+'T12:00:00Z')+7*86400000).toLocaleDateString('en-GB',{day:'numeric',month:'short',timeZone:'UTC'}))+'</button>';
  panel.innerHTML='<h2>📅 Weekly actions · rota commencing '+esc(data.week)+'</h2><p><strong>'+data.submitted+' / '+data.total+'</strong> drivers submitted availability · <strong>'+pending+'</strong> outstanding</p>'+rows+copies+'<p class="note">Tick when completed. WhatsApp messages are sent manually; Dulogix records the manager and time.</p><details><summary>View '+pending+' drivers awaiting full availability</summary><div style="padding:10px">'+(pending?[...data.outstanding,...data.partial].map(d=>'<div>'+esc(d.name)+' — '+(d.days?d.days+'/7 days':'Not started')+'</div>').join(''):'Everyone has submitted.')+'</div></details>';
  panel.querySelectorAll('[data-check]').forEach(box=>box.onchange=async()=>{
+  if(!canEdit){box.checked=!box.checked;return;}
   const key=box.dataset.check,checked=box.checked;
   if(!confirm(checked?'Confirm '+names[key]+' is completed?':'Remove completion for '+names[key]+'?')){box.checked=!checked;return;}
   const broadcast=key==='broadcast'||key==='outstanding';

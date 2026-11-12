@@ -45,7 +45,12 @@ final class SectionGuardSubscriber implements EventSubscriberInterface
         $sharing = (bool) preg_match('~^/api/rota/[^/]+/distribution/\d+$~', $path)
             || (bool) preg_match('~^/api/rota/[^/]+/whatsapp/\d+$~', $path)
             || (bool) preg_match('~^/api/whatsapp/general/\d+$~', $path);
-        if (!in_array($method, ['GET','HEAD','OPTIONS'], true) && !$sharing && !SectionAccess::canEdit($user, $section)) {
+        // Performance Full may save FICO only on the Operations report.
+        // The controller separately validates score_override and rejects returns/other edits.
+        $ficoOverride = $section === 'operations' && $path === '/operations/report' && $method === 'POST'
+            && $event->getRequest()->request->get('action') === 'score_override'
+            && SectionAccess::performanceLevel($user) === 'full';
+        if (!in_array($method, ['GET','HEAD','OPTIONS'], true) && !$sharing && !$ficoOverride && !SectionAccess::canEdit($user, $section)) {
             throw new AccessDeniedHttpException('Read-only access: editing is not permitted.');
         }
     }
