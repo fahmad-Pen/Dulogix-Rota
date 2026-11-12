@@ -82,17 +82,20 @@
     head.append(headRow);
     const body = document.createElement("tbody");
     const shareLines = ["DULOGIX · Bottom 10 · " + label, note.textContent, ""];
+    const formatMetric = metric => key === "qty" || key === "psb"
+      ? String(Math.round(metric))
+      : String(Number(metric.toFixed(2)));
     ranked.forEach(({ row, metric }, index) => {
       const name = row.cells[0]?.querySelector("strong, b")?.textContent?.trim() || row.cells[0]?.textContent?.trim() || "Driver";
       const tr = document.createElement("tr");
-      [String(index + 1).padStart(2, "0"), name, String(metric)].forEach((text, cellIndex) => {
+      [String(index + 1).padStart(2, "0"), name, formatMetric(metric)].forEach((text, cellIndex) => {
         const td = document.createElement("td");
         td.textContent = text;
         if (cellIndex === 2) td.className = "bottom-report-value";
         tr.append(td);
       });
       body.append(tr);
-      shareLines.push((index + 1) + ". " + name + " — " + metric);
+      shareLines.push((index + 1) + ". " + name + " — " + formatMetric(metric));
     });
     if (!ranked.length) {
       const tr = document.createElement("tr");
