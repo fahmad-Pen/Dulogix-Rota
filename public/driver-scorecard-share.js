@@ -39,6 +39,99 @@ async function imageFromReport(){
   }
  });
 
+ // Export-only title banner: compact Dulogix navy header with breathing room below the logo/date.
+ const exportTitle=mobile.querySelector('.sc-title');
+ if(exportTitle){
+  exportTitle.style.setProperty('font-size','65px','important');
+  exportTitle.style.setProperty('line-height','1.2','important');
+  exportTitle.style.setProperty('font-weight','800','important');
+  exportTitle.style.setProperty('letter-spacing','1px','important');
+  exportTitle.style.setProperty('color','#ffffff','important');
+  exportTitle.style.setProperty('background','#17456c','important');
+  exportTitle.style.setProperty('border-left','14px solid #17b7d5','important');
+  exportTitle.style.setProperty('border-radius','14px','important');
+  exportTitle.style.setProperty('padding','22px 30px','important');
+  exportTitle.style.setProperty('margin','48px 0 20px','important');
+  exportTitle.style.setProperty('text-align','center','important');
+ }
+ // Export-only header: centre the driver below the report title and avoid repeating the report description.
+ const exportHeading=mobile.querySelector('.sc-driver-heading');
+ if(exportHeading){
+  exportHeading.style.setProperty('justify-content','center','important');
+  exportHeading.style.setProperty('text-align','center','important');
+  const name=exportHeading.querySelector('h2');
+  if(name){
+   name.style.setProperty('width','100%','important');
+   name.style.setProperty('text-align','center','important');
+   name.style.setProperty('margin','8px 0 18px','important');
+  }
+ }
+ const exportSubtitle=mobile.querySelector('.sc-meta div');
+ if(exportSubtitle)exportSubtitle.remove();
+ // In the shared single-column layout, show focus areas after the score explanation.
+ const exportFocus=mobile.querySelector('.sc-recommended');
+ const exportExplanation=mobile.querySelector('.sc-explainer');
+ if(exportFocus){
+  if(exportExplanation)exportExplanation.insertAdjacentElement('beforebegin',exportFocus);
+  else mobile.querySelector('.sc-category-grid')?.insertAdjacentElement('afterend',exportFocus);
+ }
+ // Keep the summary readable in the fixed-width WhatsApp export.
+ const exportOverall=mobile.querySelector('.sc-overall');
+ if(exportOverall){
+  exportOverall.style.setProperty('display','grid','important');
+  exportOverall.style.setProperty('grid-template-columns','minmax(350px,1fr) minmax(0,1.6fr)','important');
+  exportOverall.style.setProperty('align-items','center','important');
+ }
+ const exportScoreSide=mobile.querySelector('.sc-score-side');
+ if(exportScoreSide){
+  exportScoreSide.style.setProperty('display','grid','important');
+  exportScoreSide.style.setProperty('grid-template-columns','minmax(0,1fr) 420px','important');
+  exportScoreSide.style.setProperty('gap','22px','important');
+ }
+ const exportScore=mobile.querySelector('.sc-score-value');
+ if(exportScore){
+  exportScore.style.setProperty('white-space','nowrap','important');
+  exportScore.querySelectorAll('b,strong').forEach(el=>{
+   el.style.setProperty('font-size',el.tagName==='STRONG'?'68px':'43px','important');
+   el.style.setProperty('white-space','nowrap','important');
+  });
+ }
+ const exportStatus=mobile.querySelector('.sc-overall .sc-status');
+ if(exportStatus){
+  exportStatus.style.setProperty('font-size','43px','important');
+  exportStatus.style.setProperty('white-space','nowrap','important');
+  exportStatus.style.setProperty('display','inline-block','important');
+ }
+ const exportWow=mobile.querySelector('.sc-score-wow');
+ if(exportWow){
+  exportWow.style.setProperty('min-width','0','important');
+  exportWow.style.setProperty('white-space','normal','important');
+  const badge=exportWow.querySelector('.sc-rank-badge');
+  if(badge){
+   badge.style.setProperty('font-size','35px','important');
+   badge.style.setProperty('white-space','normal','important');
+   badge.style.setProperty('text-align','center','important');
+  }
+ }
+ const exportMeta=mobile.querySelector('.sc-summary-meta');
+ if(exportMeta){
+  exportMeta.style.setProperty('display','grid','important');
+  exportMeta.style.setProperty('grid-template-columns','auto minmax(0,1fr)','important');
+  exportMeta.style.setProperty('gap','22px','important');
+  const delivered=exportMeta.querySelector('.sc-delivered');
+  if(delivered)delivered.style.setProperty('font-size','37px','important');
+  const legend=exportMeta.querySelector('.sc-grading-legend');
+  if(legend){
+   legend.style.setProperty('justify-content','flex-end','important');
+   legend.style.setProperty('flex-wrap','nowrap','important');
+   legend.style.setProperty('gap','8px','important');
+   legend.querySelectorAll('span').forEach(el=>{
+    el.style.setProperty('font-size','29px','important');
+    el.style.setProperty('white-space','nowrap','important');
+    el.style.setProperty('padding','6px 7px','important');
+   });
+  }
+ }
  // Export is 2048px wide and fonts are enlarged 4x; scale the POD detail table too.
  const podTable=mobile.querySelector('.sc-pod-reasons');
  if(podTable){
