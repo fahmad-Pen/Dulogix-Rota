@@ -42,6 +42,11 @@ jobs:
             bin config migrations public src templates vendor \
             composer.json composer.lock symfony.lock \
             su746574@access-5021721738.webspace-host.com:/home/www/public/Dulogix-app/
+      - name: Ensure PHP can write diagnostic logs
+        run: |
+          ssh -i ~/.ssh/dulogix_ionos -o BatchMode=yes -o StrictHostKeyChecking=yes \
+            su746574@access-5021721738.webspace-host.com \
+            'cd /home/www/public/Dulogix-app && mkdir -p var/log && chmod 2775 var/log && touch var/log/production-diagnostics.log && chmod 664 var/log/production-diagnostics.log'
       - name: Run production migrations and validate schema
         run: |
           ssh -i ~/.ssh/dulogix_ionos -o BatchMode=yes -o StrictHostKeyChecking=yes \

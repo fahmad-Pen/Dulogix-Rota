@@ -42,8 +42,10 @@ final class ProductionDiagnosticsSubscriber implements EventSubscriberInterface
         $start = $request->server->get('REQUEST_TIME_FLOAT');
         $duration = is_numeric($start) ? round((microtime(true) - (float) $start) * 1000) : null;
         $threshold = max(250, (int) (getenv('DULOGIX_SLOW_REQUEST_MS') ?: 2000));
-        if ($status >= 500 || ($duration !== null && $duration >= $threshold)) {
-            $this->write($status >= 500 ? 'http_error' : 'slow_request', $request->getPathInfo(), [
+        // Capture Operations Report timings even when the page is below the global slow threshold.
+        $isOperationsReport = $request->isMethod('GET') && $request->getPathInfo() === '/operations/report';
+        if ($status >= 500 || ($duration !== null && ($duration >= $threshold || $isOperationsReport))) {
+            $this->write($status >= 500 ? 'http_error' : ($duration !== null && $duration >= $threshold ? 'slow_request' : 'operations_timing'), $request->getPathInfo(), [
                 'status' => $status, 'duration_ms' => $duration, 'method' => $request->getMethod(),
             ]);
         }
@@ -71,12 +73,25 @@ final class ProductionDiagnosticsSubscriber implements EventSubscriberInterface
             return;
         }
         try {
-            if (is_file($file) && filesize($file) >= 10 * 1024 * 1024) {
-                @unlink($file.'.5');
-                for ($i = 4; $i >= 1; --$i) {
-                    if (is_file($file.'.'.$i)) @rename($file.'.'.$i, $file.'.'.($i + 1));
+            // Daily rotation permits reliable 30-day retention without deleting recent errors.
+            // Also rotate oversized logs to bound disk usage during busy days.
+            $today = gmdate('Y-m-d');
+            $activeDay = is_file($file) ? gmdate('Y-m-d', (int) filemtime($file)) : $today;
+            if (is_file($file) && ($activeDay !== $today || filesize($file) >= 10 * 1024 * 1024)) {
+                $suffix = '.'.$activeDay;
+                $archive = $file.$suffix;
+                for ($i = 1; is_file($archive); ++$i) $archive = $file.$suffix.'.'.$i;
+                @rename($file, $archive);
+            }
+            // Cleanup occurs on writes; no cron is required. Keep today's active log
+            // and archives from the preceding 30 days.
+            foreach (glob($file.'.*') ?: [] as $archive) {
+                if (preg_match('/\\.(\\d{4}-\\d{2}-\\d{2})(?:\\.\\d+)?$/', $archive, $matches)) {
+                    if ($matches[1] < gmdate('Y-m-d', time() - 30 * 86400)) @unlink($archive);
+                } elseif (preg_match('/\\.\\d+$/', $archive) && filemtime($archive) < time() - 30 * 86400) {
+                    // Remove expired archives created by the previous numbered rotation scheme.
+                    @unlink($archive);
                 }
-                @rename($file, $file.'.1');
             }
             if (@file_put_contents($file, $entry."\n", FILE_APPEND | LOCK_EX) === false) {
                 error_log('[dulogix] '.$entry);
