@@ -35,10 +35,17 @@ final class PwaHeadSubscriber implements EventSubscriberInterface
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Dulogix">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-<script defer src="/pwa-register.js"></script>
 HTML;
+        // File modification times change with deployment, so browsers fetch fresh JS
+        // without requiring the driver to uninstall the PWA or clear site data.
+        $public = dirname(__DIR__, 2).'/public/';
+        foreach (['pwa-register.js'] as $script) {
+            $version = is_file($public.$script) ? (string) filemtime($public.$script) : '1';
+            $head .= "\n<script defer src=\"/{$script}?v={$version}\"></script>";
+        }
         if ($event->getRequest()->getPathInfo() === '/driver/daily-check') {
-            $head .= "\n<script defer src=\"/driver-push.js\"></script>";
+            $version = is_file($public.'driver-push.js') ? (string) filemtime($public.'driver-push.js') : '1';
+            $head .= "\n<script defer src=\"/driver-push.js?v={$version}\"></script>";
         }
         $html = preg_replace('~</head>~i', $head."\n</head>", $html, 1);
         if ($html === null) return;
