@@ -91,8 +91,15 @@ final class OperationsReportController extends AbstractController
                     ]);
                     ++$published;
                 }
+                // Comments are independently visible even without a published route.
+                // Recreate comment-only instruction rows after replacing route publication.
+                foreach($db->fetchAllAssociative("SELECT driver_id FROM operations_daily WHERE report_date=:day AND TRIM(COALESCE(comments,''))<>''", ['day'=>$day]) as $commentRow){
+                    $commentDriver=(int)$commentRow['driver_id'];
+                    if($db->fetchOne('SELECT 1 FROM operations_lane_publication WHERE report_date=:day AND driver_id=:id',['day'=>$day,'id'=>$commentDriver]))continue;
+                    $db->insert('operations_lane_publication',['report_date'=>$day,'driver_id'=>$commentDriver,'holding_time'=>null,'route'=>null,'stg_location'=>null,'van_registration'=>null,'published_by'=>$this->getUser()->getId(),'published_at'=>(new \DateTimeImmutable('now',$tz))->format('Y-m-d H:i:s')]);
+                }
                 $db->commit();
-                $pushNotifier->schedule($request, $day, array_keys($laneRows));
+                $pushNotifier->schedule($request, $day, $db->fetchFirstColumn('SELECT driver_id FROM operations_lane_publication WHERE report_date=:day',['day'=>$day]));
             }catch(\Throwable $e){$db->rollBack();throw $e;}
             $this->addFlash($published?'lane_success':'lane_error',$published
                 ?'Published holding times, routes, STG and assigned vans for '.$published.' drivers on '.$day.'.'
@@ -200,10 +207,15 @@ final class OperationsReportController extends AbstractController
                     else $db->insert('operations_daily',['report_date'=>$day,'driver_id'=>$id]+$values);
                     // Once this day's route is published, keep its displayed van current.
                     // Do not create a publication for dates/drivers not yet published.
-                    $db->update('operations_lane_publication',
-                        ['van_registration'=>$van?:null],
-                        ['report_date'=>$day,'driver_id'=>$id]
-                    );
+                    $publication=$db->fetchAssociative('SELECT holding_time,route,stg_location FROM operations_lane_publication WHERE report_date=:day AND driver_id=:id',['day'=>$day,'id'=>$id]);
+                    if($publication){
+                        // A comment-only publication must not imply a route or van assignment.
+                        $hasRoute=trim((string)($publication['holding_time']??''))!=='' || trim((string)($publication['route']??''))!=='' || trim((string)($publication['stg_location']??''))!=='';
+                        if($hasRoute)$db->update('operations_lane_publication',['van_registration'=>$van?:null],['report_date'=>$day,'driver_id'=>$id]);
+                        elseif($comments==='')$db->delete('operations_lane_publication',['report_date'=>$day,'driver_id'=>$id]);
+                    }elseif($comments!==''){
+                        $db->insert('operations_lane_publication',['report_date'=>$day,'driver_id'=>$id,'holding_time'=>null,'route'=>null,'stg_location'=>null,'van_registration'=>null,'published_by'=>$this->getUser()->getId(),'published_at'=>(new \DateTimeImmutable('now',$tz))->format('Y-m-d H:i:s')]);
+                    }
                     $db->commit();
                     $pushNotifier->schedule($request, $day, [$id]);
                     if($request->isXmlHttpRequest())return new JsonResponse(['ok'=>true,'driver'=>$id,'van'=>$van,'fixed'=>$makeFixed]);
