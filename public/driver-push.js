@@ -1,5 +1,10 @@
 (() => {
-  if (!document.querySelector('.driver-welcome')) return;
+  // Phone push is offered only inside the installed Android/iOS PWA.
+  // Ordinary desktop/mobile browser sessions keep their existing driver UI.
+  const installed = window.matchMedia('(display-mode: standalone)').matches ||
+    window.matchMedia('(display-mode: fullscreen)').matches ||
+    window.navigator.standalone === true;
+  if (!installed || !document.querySelector('.driver-welcome')) return;
   const button = document.createElement('button');
   button.type = 'button';
   button.textContent = 'Enable phone notifications';
