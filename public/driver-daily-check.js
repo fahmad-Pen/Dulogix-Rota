@@ -58,11 +58,12 @@ async function load(){
    ackButton.hidden=true;
   }
   if(assignment){
-   const commentOnly=!assignment.holding_time&&!assignment.route&&!assignment.stg_location;
-   const heading=routeCard.querySelector('h2');
-   heading.textContent=commentOnly?'Message from Operations':'Your route assignment';
-   routeMessage.hidden=commentOnly;
-   routeVan.hidden=commentOnly;
+   // Keep the original instructions card, acknowledgement and change highlighting.
+   // When only a manager comment is published, omit the nonexistent route details.
+   const hasRoute=!!(assignment.holding_time||assignment.route||assignment.stg_location);
+   routeCard.querySelector('h2').textContent=hasRoute?'Your route assignment':'Instructions from Operations';
+   routeMessage.hidden=!hasRoute;
+   routeVan.hidden=!hasRoute;
    const hold=assignment.holding_time||'not yet specified';
    const route=assignment.route||'not yet specified';
    const stg=assignment.stg_location||'not yet specified';
