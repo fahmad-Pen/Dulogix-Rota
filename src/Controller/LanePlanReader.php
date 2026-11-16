@@ -3,7 +3,7 @@ namespace App\Controller;
 
 final class LanePlanReader
 {
-    public function read(string $path): array
+    public function read(string $path, bool $routesSheet=false): array
     {
         $zip=new \ZipArchive();
         if ($zip->open($path)!==true) throw new \InvalidArgumentException('Invalid Excel file.');
@@ -18,11 +18,11 @@ final class LanePlanReader
             $book=$load('xl/workbook.xml');
             $book->registerXPathNamespace('m','http://schemas.openxmlformats.org/spreadsheetml/2006/main');
             $relId=null;
-            foreach($book->xpath('//m:sheet') as $tab)if(strcasecmp((string)$tab['name'],'LANE PLAN')===0){
+            foreach($book->xpath('//m:sheet') as $tab)if(strcasecmp((string)$tab['name'],$routesSheet?'Routes':'LANE PLAN')===0){
                 $attr=$tab->attributes('http://schemas.openxmlformats.org/officeDocument/2006/relationships');
                 $relId=(string)$attr['id'];break;
             }
-            if(!$relId)throw new \InvalidArgumentException('LANE PLAN tab missing.');
+            if(!$relId)throw new \InvalidArgumentException('Required worksheet tab missing.');
             $rels=$load('xl/_rels/workbook.xml.rels');$target=null;
             foreach($rels->children() as $rel)if((string)$rel['Id']===$relId){$target=(string)$rel['Target'];break;}
             if(!$target)throw new \InvalidArgumentException('LANE PLAN tab reference missing.');
@@ -50,16 +50,28 @@ final class LanePlanReader
                     $cells[$m[0]??'']=trim($value);
                 }
                 if($header){
-                    foreach(['C'=>'COLOR','D'=>'HOLDING LANE TIME','G'=>'STG. LOCATION','H'=>'ROUTE','I'=>'ASSIGNED DA'] as $col=>$name)
+                    foreach($routesSheet?['A'=>'ROUTE CODE','C'=>'TRANSPORTER ID']:['C'=>'COLOR','D'=>'HOLDING LANE TIME','G'=>'STG. LOCATION','H'=>'ROUTE'] as $col=>$name)
                         if(strtoupper($cells[$col]??'')!==$name)throw new \InvalidArgumentException('Unexpected LANE PLAN header in column '.$col);
                     $header=false;continue;
                 }
-                $id=strtoupper(trim($cells['I']??''));
-                if(!preg_match('/^[A-Z0-9]{8,40}$/',$id))continue;
-                if(isset($records[$id]))throw new \InvalidArgumentException('Duplicate Assigned DA: '.$id);
-                $records[$id]=['color'=>substr($cells['C']??'',0,30),'holding_time'=>substr($cells['D']??'',0,30),'stg_location'=>substr($cells['G']??'',0,40),'route'=>substr($cells['H']??'',0,60)];
+                $id=strtoupper(trim($cells[$routesSheet?'C':'H']??''));
+                if($routesSheet){
+                    $route=trim($cells['A']??'');
+                    if($route===''||$id==='')continue;
+                    $names=array_map('trim',explode('|',(string)($cells['D']??'')));
+                    foreach(explode('|',$id) as $position=>$personId){
+                        $personId=trim($personId);
+                        if(!preg_match('/^[A-Z0-9]{8,40}$/',$personId))continue;
+                        if(isset($records[$personId]))throw new \InvalidArgumentException('Duplicate Transporter ID: '.$personId);
+                        $records[$personId]=['route'=>substr($route,0,60),'name'=>substr($names[$position]??($names[0]??''),0,120)];
+                    }
+                    continue;
+                }
+                if($id==='')continue;
+                if(isset($records[$id]))throw new \InvalidArgumentException('Duplicate route: '.$id);
+                $records[$id]=['color'=>substr($cells['C']??'',0,30),'holding_time'=>substr($cells['D']??'',0,30),'stg_location'=>substr($cells['G']??'',0,40)];
             }
-            if(!$records)throw new \InvalidArgumentException('No Assigned DA records in LANE PLAN.');
+            if(!$records)throw new \InvalidArgumentException('No valid routes found in spreadsheet.');
             return $records;
         }finally{$zip->close();}
     }
