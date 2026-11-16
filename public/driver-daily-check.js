@@ -5,7 +5,7 @@ if(!date)return;
 const fields={pre:[$('shift-ementor'),$('shift-clear-quote')],post:[$('shift-fisco'),$('shift-returns')]};
 const states={pre:$('shift-pre-state'),post:$('shift-post-state')};
 const buttons={pre:$('shift-save-pre'),post:$('shift-save-post')};
-let loading=false,record=null,currentHash=null;
+let loading=false,record=null,currentHash=null,requestController=null,requestVersion=0,lastRefresh=0,returnTimer=null;
 const today=date.max;
 function formatTime(raw){
  if(!raw)return '';
@@ -34,7 +34,14 @@ function refresh(){
  }
 }
 async function load(preserveDraft=false){
- if(loading)return;
+ if(loading){
+  if(!preserveDraft)return;
+  // Cancel the older read; only the newest server response may update the screen.
+  requestController?.abort();
+ }
+ const version=++requestVersion;
+ const controller=new AbortController();
+ requestController=controller;
  const draft=preserveDraft&&record?{
   date:date.value,ementor:$('shift-ementor').checked,clearQuote:$('shift-clear-quote').checked,
   fico:$('shift-fisco').value,returns:$('shift-returns').value
@@ -42,8 +49,10 @@ async function load(preserveDraft=false){
  loading=true;
  for(const section of ['pre','post']){buttons[section].disabled=true;fields[section].forEach(el=>el.disabled=true);states[section].textContent='Loading?';}
  try{
-  const r=await fetch('/driver/daily-check/data?date='+encodeURIComponent(date.value),{credentials:'same-origin'});
-  const j=await r.json();if(!r.ok||!j.ok)throw Error(j.error||'Unable to load');
+  const r=await fetch('/driver/daily-check/data?date='+encodeURIComponent(date.value),{credentials:'same-origin',cache:'no-store',signal:controller.signal});
+  const j=await r.json();if(version!==requestVersion)return;
+  if(!r.ok||!j.ok)throw Error(j.error||'Unable to load');
+  lastRefresh=Date.now();
   record=j.data;
   const routeCard=$('shift-route-card'),routeMessage=$('shift-route-message'),routeVan=$('shift-route-van');
   const assignment=j.assignment;
@@ -106,8 +115,8 @@ async function load(preserveDraft=false){
    if(!record.fisco_submitted_at)$('shift-fisco').value=draft.fico;
    if(!record.returns_submitted_at)$('shift-returns').value=draft.returns;
   }
- }catch(e){$('shift-route-card').hidden=true;record=null;states.pre.textContent=states.post.textContent='Unable to load: '+e.message;return}
- finally{loading=false;if(record)refresh()}
+ }catch(e){if(version!==requestVersion)return;$('shift-route-card').hidden=true;record=null;states.pre.textContent=states.post.textContent='Unable to load: '+e.message;return}
+ finally{if(version===requestVersion){loading=false;requestController=null;if(record)refresh();}}
 }
 async function save(section){
  if(loading||date.value!==today||!record)return;
@@ -159,6 +168,15 @@ $('shift-ack').addEventListener('click',async()=>{
 buttons.pre.addEventListener('click',()=>save('pre'));
 buttons.post.addEventListener('click',()=>save('post'));
 date.addEventListener('change',()=>load());
-window.addEventListener('dulogix:refresh-instructions',()=>load(true));
+function refreshLatest(force=false){
+ if(document.hidden)return;
+ clearTimeout(returnTimer);
+ // Focus, pageshow and visibility events often arrive together on Android.
+ returnTimer=setTimeout(()=>{if(force||Date.now()-lastRefresh>1500)load(true);},150);
+}
+window.addEventListener('dulogix:refresh-instructions',()=>refreshLatest(true));
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshLatest()});
+window.addEventListener('pageshow',()=>refreshLatest());
+window.addEventListener('focus',()=>refreshLatest());
 load();
 })();

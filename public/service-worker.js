@@ -2,13 +2,21 @@
 self.addEventListener('push', (event) => {
   let data = {};
   try { data = event.data ? event.data.json() : {}; } catch (_) {}
-  event.waitUntil(self.registration.showNotification(data.title || 'Dulogix update', {
+  event.waitUntil((async () => {
+    // Refresh already-open driver pages as soon as the push arrives.
+    const pages = await clients.matchAll({type: 'window', includeUncontrolled: true});
+    for (const page of pages) {
+      if (new URL(page.url).origin === self.location.origin && page.url.includes('/driver/daily-check'))
+        page.postMessage({type: 'DULOGIX_INSTRUCTIONS_UPDATED'});
+    }
+    await self.registration.showNotification(data.title || 'Dulogix update', {
     body: data.body || 'Please check your latest instructions.',
     icon: '/pwa-icon-192.png',
     badge: '/pwa-icon-192.png',
     tag: 'dulogix-driver-instructions',
     data: {url: '/driver/daily-check'}
-  }));
+    });
+  })());
 });
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
