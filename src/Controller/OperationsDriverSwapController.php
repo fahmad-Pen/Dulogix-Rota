@@ -48,7 +48,7 @@ final class OperationsDriverSwapController extends AbstractController
     }
 
     #[Route('/operations/change-driver', name: 'operations_change_driver', methods: ['POST'])]
-    public function change(Request $request, Connection $db, EntityManagerInterface $em): Response
+    public function change(Request $request, Connection $db, EntityManagerInterface $em, DriverPushNotifier $pushNotifier): Response
     {
         if (!SectionAccess::canEdit($this->getUser(), 'operations')) {
             throw $this->createAccessDeniedException();
@@ -200,6 +200,7 @@ final class OperationsDriverSwapController extends AbstractController
                 'actor_id' => $actor, 'created_at' => $now,
             ]);
             $db->commit();
+            if ($published) $pushNotifier->schedule($request, $day, [$from, $to]);
             $this->addFlash('lane_success', ($swap ? 'Swapped routes for ' : 'Changed route driver from ')
                 .$drivers[$from]->getDisplayName().' and '.$drivers[$to]->getDisplayName()
                 .($published ? '. Published assignments updated.' : '. Publish when ready.'));

@@ -12,11 +12,11 @@ use Symfony\Component\Routing\Attribute\Route;
 final class DriverPushController extends AbstractController
 {
     #[Route('/driver/push/config', name: 'driver_push_config', methods: ['GET'])]
-    public function config(): JsonResponse
+    public function config(DriverPushNotifier $notifier): JsonResponse
     {
         $this->denyAccessUnlessGranted('ROLE_DRIVER');
-        $key = (string) ($_SERVER['DULOGIX_VAPID_PUBLIC_KEY'] ?? $_ENV['DULOGIX_VAPID_PUBLIC_KEY'] ?? getenv('DULOGIX_VAPID_PUBLIC_KEY') ?: '');
-        return new JsonResponse(['enabled' => $key !== '', 'publicKey' => $key]);
+        $keys = $notifier->keys();
+        return new JsonResponse(['enabled' => true, 'publicKey' => $keys['public_key']]);
     }
 
     #[Route('/driver/push/subscription', name: 'driver_push_subscription', methods: ['POST', 'DELETE'])]
