@@ -123,7 +123,7 @@ final class OperationsDriverSwapController extends AbstractController
             if ($newVans[$from] !== '' && $newVans[$from] === $newVans[$to]) {
                 throw new \DomainException('Both drivers cannot have the same van.');
             }
-            $published = (int) $db->fetchOne('SELECT COUNT(*) FROM operations_lane_publication WHERE report_date=?', [$day]) > 0;
+            $published = (int) $db->fetchOne("SELECT COUNT(*) FROM operations_lane_publication WHERE report_date=? AND (COALESCE(holding_time,'')<>'' OR COALESCE(route,'')<>'' OR COALESCE(stg_location,'')<>'')", [$day]) > 0;
             $db->delete('operations_lane_plan', ['report_date' => $day, 'driver_id' => $from]);
             if ($swap) {
                 $db->delete('operations_lane_plan', ['report_date' => $day, 'driver_id' => $to]);
@@ -173,6 +173,15 @@ final class OperationsDriverSwapController extends AbstractController
                     $db->delete('operations_lane_publication', ['report_date' => $day, 'driver_id' => $id]);
                     $plan = $id === $to ? $plans[$from] : ($swap ? $plans[$to] : null);
                     if ($plan === null) {
+                        // Route withdrawal must not erase an independent manager message.
+                        $comment = trim((string) $db->fetchOne('SELECT comments FROM operations_daily WHERE report_date=? AND driver_id=?', [$day, $id]));
+                        if ($comment !== '') {
+                            $db->insert('operations_lane_publication', [
+                                'report_date' => $day, 'driver_id' => $id,
+                                'holding_time' => null, 'route' => null, 'stg_location' => null,
+                                'van_registration' => null, 'published_by' => $actor, 'published_at' => $now,
+                            ]);
+                        }
                         continue;
                     }
                     $db->insert('operations_lane_publication', [

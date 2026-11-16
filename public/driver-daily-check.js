@@ -58,6 +58,11 @@ async function load(){
    ackButton.hidden=true;
   }
   if(assignment){
+   const commentOnly=!assignment.holding_time&&!assignment.route&&!assignment.stg_location;
+   const heading=routeCard.querySelector('h2');
+   heading.textContent=commentOnly?'Message from Operations':'Your route assignment';
+   routeMessage.hidden=commentOnly;
+   routeVan.hidden=commentOnly;
    const hold=assignment.holding_time||'not yet specified';
    const route=assignment.route||'not yet specified';
    const stg=assignment.stg_location||'not yet specified';
