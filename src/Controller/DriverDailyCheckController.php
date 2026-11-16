@@ -32,7 +32,7 @@ HTML;
   return new Response($html);
  }
  #[Route('/driver/daily-check/data',name:'driver_daily_check_data',methods:['GET','POST'])]
- public function check(Request $request,Connection $db):JsonResponse
+ public function check(Request $request,Connection $db,DriverPushNotifier $pushNotifier):JsonResponse
  {
   $this->denyAccessUnlessGranted('ROLE_DRIVER');
   $driver=$this->getUser();$id=$driver->getId();
@@ -72,6 +72,7 @@ HTML;
    $hash=self::instructionHash($snapshot);
    if(!hash_equals($hash,(string)$request->request->get('instruction_hash','')))return new JsonResponse(['ok'=>false,'error'=>'Instructions changed. Refresh and review the latest version.'],409);
    $db->executeStatement('INSERT INTO operations_instruction_ack (report_date,driver_id,instruction_hash,instruction_snapshot,acknowledged_at) VALUES (:day,:id,:hash,:snapshot,:time) ON DUPLICATE KEY UPDATE instruction_hash=VALUES(instruction_hash),instruction_snapshot=VALUES(instruction_snapshot),acknowledged_at=VALUES(acknowledged_at)', ['day'=>$day,'id'=>$id,'hash'=>$hash,'snapshot'=>json_encode($snapshot,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES),'time'=>(new \DateTimeImmutable('now',$tz))->format('Y-m-d H:i:s')]);
+   try { $pushNotifier->acknowledged($day, (int) $id); } catch (\Throwable $e) { /* Push alerts must never block instruction acknowledgement. */ }
    return new JsonResponse(['ok'=>true]);
   }
   if($day!==$today->format('Y-m-d'))return new JsonResponse(['ok'=>false,'error'=>'Only today can be submitted. Past dates are read-only.'],403);

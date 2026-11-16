@@ -41,7 +41,7 @@ final class OperationsReportController extends AbstractController
     }
 
     #[Route('/operations/report',name:'operations_report',methods:['GET','POST'])]
-    public function report(Request $request,Connection $db,EntityManagerInterface $em): Response
+    public function report(Request $request,Connection $db,EntityManagerInterface $em,DriverPushNotifier $pushNotifier): Response
     {
         if(!SectionAccess::allowed($this->getUser(),'operations'))throw $this->createAccessDeniedException();
         $operationsFull=SectionAccess::canEdit($this->getUser(),'operations');
@@ -92,6 +92,7 @@ final class OperationsReportController extends AbstractController
                     ++$published;
                 }
                 $db->commit();
+                $pushNotifier->schedule($request, $day, array_keys($laneRows));
             }catch(\Throwable $e){$db->rollBack();throw $e;}
             $this->addFlash($published?'lane_success':'lane_error',$published
                 ?'Published holding times, routes, STG and assigned vans for '.$published.' drivers on '.$day.'.'
@@ -204,6 +205,7 @@ final class OperationsReportController extends AbstractController
                         ['report_date'=>$day,'driver_id'=>$id]
                     );
                     $db->commit();
+                    $pushNotifier->schedule($request, $day, [$id]);
                     if($request->isXmlHttpRequest())return new JsonResponse(['ok'=>true,'driver'=>$id,'van'=>$van,'fixed'=>$makeFixed]);
                     return $this->redirectToRoute('operations_report',['date'=>$day,'saved'=>1]);
                 }catch(\DomainException $e){
