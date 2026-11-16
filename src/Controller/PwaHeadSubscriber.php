@@ -37,6 +37,9 @@ final class PwaHeadSubscriber implements EventSubscriberInterface
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <script defer src="/pwa-register.js"></script>
 HTML;
+        if ($event->getRequest()->getPathInfo() === '/driver/daily-check') {
+            $head .= "\n<script defer src=\"/driver-push.js\"></script>";
+        }
         $html = preg_replace('~</head>~i', $head."\n</head>", $html, 1);
         if ($html === null) return;
         $response->setContent($html);
