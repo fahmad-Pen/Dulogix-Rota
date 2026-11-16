@@ -13,17 +13,32 @@ function formatTime(raw){
  return parts[0].split('-').reverse().join('/')+' '+(parts[1]||'').slice(0,5)+' (UK time)';
 }
 function addVan(parent,label,value){parent.append(document.createTextNode(label));const strong=document.createElement('strong');strong.textContent=value;parent.append(strong)}
+const checks={
+ pre:[['ementor','shift-ementor','ementor_submitted_at','Ementor'],['clear_quote','shift-clear-quote','clear_quote_submitted_at','Clear Quote']],
+ post:[['fisco_score','shift-fisco','fisco_submitted_at','FICO Score'],['returns_count','shift-returns','returns_submitted_at','No. of Returns']]
+};
 function refresh(){
  for(const section of ['pre','post']){
-  const saved=!!record?.[section==='pre'?'pre_updated_at':'post_updated_at'];
-  const editable=date.value===today&&!saved&&!loading;
-  fields[section].forEach(el=>el.disabled=!editable);
-  buttons[section].disabled=!editable;
-  buttons[section].hidden=date.value!==today||saved;
-  states[section].textContent=saved?'Submitted '+formatTime(record[section==='pre'?'pre_updated_at':'post_updated_at'])+' ? Locked':date.value!==today?'Read-only ? previous shift':'Not submitted';
+  const pending=[];
+  for(const [,id,stamp,label] of checks[section]){
+   const saved=!!record?.[stamp],el=$(id);
+   el.disabled=date.value!==today||saved||loading;
+   (el.closest('label')||el.closest('.field'))?.classList.toggle('shift-check-submitted',saved);
+   if(!saved)pending.push(label);
+  }
+  buttons[section].hidden=date.value!==today||!pending.length;
+  buttons[section].disabled=loading||!pending.length;
+  states[section].textContent=date.value!==today?'Read-only — previous shift':pending.length
+   ?'Still to submit: '+pending.join(', ')+'.'
+   :'All checks submitted and locked.';
  }
 }
-async function load(){
+async function load(preserveDraft=false){
+ if(loading)return;
+ const draft=preserveDraft&&record?{
+  date:date.value,ementor:$('shift-ementor').checked,clearQuote:$('shift-clear-quote').checked,
+  fico:$('shift-fisco').value,returns:$('shift-returns').value
+ }:null;
  loading=true;
  for(const section of ['pre','post']){buttons[section].disabled=true;fields[section].forEach(el=>el.disabled=true);states[section].textContent='Loading?';}
  try{
@@ -85,29 +100,50 @@ async function load(){
   $('shift-clear-quote').checked=!!Number(record.clear_quote);
   $('shift-fisco').value=record.fisco_score??'';
   $('shift-returns').value=record.returns_count??'';
+  if(draft&&draft.date===date.value){
+   if(!record.ementor_submitted_at)$('shift-ementor').checked=draft.ementor;
+   if(!record.clear_quote_submitted_at)$('shift-clear-quote').checked=draft.clearQuote;
+   if(!record.fisco_submitted_at)$('shift-fisco').value=draft.fico;
+   if(!record.returns_submitted_at)$('shift-returns').value=draft.returns;
+  }
  }catch(e){$('shift-route-card').hidden=true;record=null;states.pre.textContent=states.post.textContent='Unable to load: '+e.message;return}
  finally{loading=false;if(record)refresh()}
 }
 async function save(section){
  if(loading||date.value!==today||!record)return;
- const key=section==='pre'?'pre_updated_at':'post_updated_at';
- if(record[key])return;
+ const pending=checks[section].filter(([,id,stamp])=>!record[stamp]&&(
+  section==='pre'?$(id).checked:$(id).value.trim()!==''
+ ));
+ if(!pending.length){states[section].textContent='Nothing selected. Check or enter an outstanding item first.';return;}
  if(section==='post'){
   const score=$('shift-fisco').value,returns=$('shift-returns').value;
-  if(score===''||returns===''){states.post.textContent='Enter both FICO Score and No. of Returns before saving.';return}
-  if(!/^\d{1,3}$/.test(score)||Number(score)>850||!/^\d{1,9}$/.test(returns)){states.post.textContent='Enter a FICO Score of 0?850 and a non-negative whole number of returns.';return}
+  if(!record.fisco_submitted_at&&score!==''&&(!/^\d{1,3}$/.test(score)||Number(score)>850)){
+   states.post.textContent='Enter a FICO Score of 0–850.';return;
+  }
+  if(!record.returns_submitted_at&&returns!==''&&!/^\d{1,9}$/.test(returns)){
+   states.post.textContent='Enter a non-negative whole number of returns.';return;
+  }
  }
- if(!confirm('Are you sure you want to submit '+(section==='pre'?'Pre-Shift':'Post-Shift')+' for today?\n\nOnce saved, you cannot change it.'))return;
- loading=true;buttons[section].disabled=true;fields[section].forEach(el=>el.disabled=true);
- states[section].textContent='Saving?';
+ const names=pending.map(([, , ,label])=>label).join(', ');
+ if(!confirm('Submit '+names+' for today?\n\nOnly these items will be locked.'))return;
+ loading=true;buttons[section].disabled=true;
+ fields[section].forEach(el=>el.disabled=true);
+ states[section].textContent='Saving…';
  const body=new URLSearchParams({_token:window.DULOGIX_SHIFT_TOKEN,date:date.value,section,
-  ementor:$('shift-ementor').checked?'1':'0',clear_quote:$('shift-clear-quote').checked?'1':'0',
-  fisco_score:$('shift-fisco').value,returns_count:$('shift-returns').value});
+  ementor:pending.some(([key])=>key==='ementor')?'1':'0',
+  clear_quote:pending.some(([key])=>key==='clear_quote')?'1':'0',
+  fisco_score:pending.some(([key])=>key==='fisco_score')?$('shift-fisco').value:'',
+  returns_count:pending.some(([key])=>key==='returns_count')?$('shift-returns').value:''});
  try{
   const r=await fetch('/driver/daily-check/data',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body,credentials:'same-origin'});
   const j=await r.json();if(!r.ok||!j.ok)throw Error(j.error||'Save failed');
-  record[key]=j.saved_at;
- }catch(e){states[section].textContent='Not saved ? '+e.message;loading=false;await load();return}
+  for(const [key,,stamp] of pending)if(j.submitted.includes(key))record[stamp]=j.saved_at;
+  states[section].textContent=names+' submitted.';
+ }catch(e){
+  loading=false;refresh();
+  states[section].textContent='Not saved — '+e.message;
+  return;
+ }
  loading=false;refresh();
 }
 $('shift-ack').addEventListener('click',async()=>{
@@ -122,6 +158,7 @@ $('shift-ack').addEventListener('click',async()=>{
 });
 buttons.pre.addEventListener('click',()=>save('pre'));
 buttons.post.addEventListener('click',()=>save('post'));
-date.addEventListener('change',load);
+date.addEventListener('change',()=>load());
+window.addEventListener('dulogix:refresh-instructions',()=>load(true));
 load();
 })();

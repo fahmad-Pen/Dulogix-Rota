@@ -5,6 +5,11 @@
     window.matchMedia('(display-mode: fullscreen)').matches ||
     window.navigator.standalone === true;
   if (!installed || !document.querySelector('.driver-welcome')) return;
+  // Let notification clicks distinguish this installed app from a regular browser tab.
+  if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', event => {
+    if (event.data?.type === 'DULOGIX_DISPLAY_MODE') event.ports[0]?.postMessage({standalone: true});
+    if (event.data?.type === 'DULOGIX_INSTRUCTIONS_UPDATED') window.dispatchEvent(new Event('dulogix:refresh-instructions'));
+  });
   const button = document.createElement('button');
   button.type = 'button';
   button.textContent = 'Enable phone notifications';

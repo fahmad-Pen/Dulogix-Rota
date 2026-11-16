@@ -14,8 +14,23 @@ self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   event.waitUntil((async () => {
     const windows = await clients.matchAll({type: 'window', includeUncontrolled: true});
-    const existing = windows.find(c => new URL(c.url).origin === self.location.origin && c.url.includes('/driver/daily-check'));
-    if (existing) { await existing.focus(); return; }
+    const candidates = windows.filter(c => new URL(c.url).origin === self.location.origin && c.url.includes('/driver/daily-check'));
+    // A normal Chrome tab must not take precedence over the installed PWA.
+    // Ask each live page which display mode it is actually running in.
+    const modes = await Promise.all(candidates.map(c => new Promise(resolve => {
+      const channel = new MessageChannel();
+      const timeout = setTimeout(() => resolve(false), 350);
+      channel.port1.onmessage = e => { clearTimeout(timeout); resolve(e.data?.standalone === true); };
+      try { c.postMessage({type: 'DULOGIX_DISPLAY_MODE'}, [channel.port2]); }
+      catch (_) { clearTimeout(timeout); resolve(false); }
+    })));
+    const app = candidates.find((_, i) => modes[i]);
+    if (app) {
+      await app.focus();
+      app.postMessage({type: 'DULOGIX_INSTRUCTIONS_UPDATED'});
+      return;
+    }
+    // No installed app window is available: let Android resolve the PWA URL.
     await clients.openWindow('/driver/daily-check');
   })());
 });
