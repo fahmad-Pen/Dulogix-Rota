@@ -3,7 +3,7 @@
   "name": "Dulogix Driver",
   "short_name": "Dulogix",
   "description": "Dulogix driver portal",
-  "start_url": "/driver/daily-check",
+  "start_url": "/login",
   "scope": "/",
   "display": "standalone",
   "background_color": "#ffffff",
