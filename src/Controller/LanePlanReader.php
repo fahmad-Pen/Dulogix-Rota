@@ -58,13 +58,13 @@ final class LanePlanReader
                 if($routesSheet){
                     $route=trim($cells['A']??'');
                     if($route===''||$id==='')continue;
-                    $names=array_map('trim',explode('|',(string)($cells['D']??'')));
-                    foreach(explode('|',$id) as $position=>$personId){
-                        $personId=trim($personId);
-                        if(!preg_match('/^[A-Z0-9]{8,40}$/',$personId))continue;
-                        if(isset($records[$personId]))throw new \InvalidArgumentException('Duplicate Transporter ID: '.$personId);
-                        $records[$personId]=['route'=>substr($route,0,60),'name'=>substr($names[$position]??($names[0]??''),0,120)];
-                    }
+                    // Only the first Transporter ID is assigned to this route.
+                    // Additional pipe-separated IDs are supporting drivers, not route owners.
+                    $personId=trim(explode('|',$id,2)[0]);
+                    if(!preg_match('/^[A-Z0-9]{8,40}$/',$personId))continue;
+                    if(isset($records[$personId]))throw new \InvalidArgumentException('Duplicate primary Transporter ID: '.$personId);
+                    $name=trim(explode('|',(string)($cells['D']??''),2)[0]);
+                    $records[$personId]=['route'=>substr($route,0,60),'name'=>substr($name,0,120)];
                     continue;
                 }
                 if($id==='')continue;
