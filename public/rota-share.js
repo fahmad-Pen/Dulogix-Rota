@@ -106,7 +106,9 @@ function createCard(data){
  for(let i=0;i<7;i++){
   const y=395+i*91;const code=String(data.allocations[i]||'').trim();const value=code?(allocationLabels[code.toUpperCase()]?code+' ('+allocationLabels[code.toUpperCase()]+')':code):'Not assigned';
   c.fillStyle=i%2===0?design.row_color:'#f8fafc';round(c,70,y,760,78,10);
-  c.fillStyle='#1c3654';c.font='bold 27px system-ui';c.fillText(days[i],94,y+48);
+  const dayDate=new Date(start.getTime()+i*86400000);
+  const dayLabel=days[i]+' '+dayDate.toLocaleDateString('en-GB',{day:'2-digit',month:'short',timeZone:'UTC'});
+  c.fillStyle='#1c3654';c.font='bold 27px system-ui';c.fillText(dayLabel,94,y+48);
   c.textAlign='right';c.font='bold 26px system-ui';c.fillStyle=value==='Not assigned'?'#9a5b17':design.accent_color;c.fillText(value,802,y+48,475);c.textAlign='left';
  }
  c.fillStyle='#53677d';c.font='21px system-ui';c.fillText(design.footer.slice(0,140),80,1085,740);
