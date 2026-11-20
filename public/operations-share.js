@@ -3,15 +3,15 @@
 const button=document.getElementById('share-driver-times'),feedback=document.getElementById('share-feedback');
 if(!button)return;
 const overlay=document.createElement('div');
-overlay.style.cssText='position:fixed;inset:0;background:#10243ac9;z-index:1000;display:none;align-items:center;justify-content:center;padding:14px;overflow:auto';
-overlay.innerHTML='<div style="background:white;border-radius:12px;padding:18px;width:min(570px,100%);max-height:95vh;overflow:auto"><h2 style="margin:0 0 12px">Share Driver Start Times</h2><img id="ops-share-preview" alt="Driver start times report image" style="display:block;width:100%;border:1px solid #dce5ef;border-radius:8px"><p id="ops-share-status" aria-live="polite"></p><div style="display:flex;gap:8px;flex-wrap:wrap"><button id="ops-copy-share" type="button" style="background:#137b53;color:white;font-size:15px;padding:12px;flex:1">📋 Copy &amp; Share</button><button id="ops-phone-share" type="button" style="background:#137b53;color:white;font-size:15px;padding:12px;flex:1">📲 Share on phone</button><button id="ops-print-share" type="button" style="background:#1d4e83;color:white;font-size:15px;padding:12px">🖨 Print</button><button id="ops-pdf-share" type="button" style="background:#1d4e83;color:white;font-size:15px;padding:12px">📄 Save as PDF</button><button id="ops-share-close" type="button" style="font-size:15px;padding:12px">Close</button></div></div>';
+overlay.className='ops-share-overlay';
+overlay.innerHTML='<div class="ops-share-dialog"><h2>Share Driver Start Times</h2><img id="ops-share-preview" alt="Driver start times report image"><p id="ops-share-status" aria-live="polite"></p><div class="ops-share-actions"><button id="ops-copy-share" type="button" class="ops-share-green">📋 Copy &amp; Share</button><button id="ops-phone-share" type="button" class="ops-share-green">📲 Share on phone</button><button id="ops-print-share" type="button" class="ops-share-blue">🖨 Print</button><button id="ops-pdf-share" type="button" class="ops-share-blue">📄 Save as PDF</button><button id="ops-share-close" type="button" class="ops-share-close">Close</button></div></div>';
 document.body.append(overlay);
 const preview=overlay.querySelector('#ops-share-preview'),status=overlay.querySelector('#ops-share-status'),copy=overlay.querySelector('#ops-copy-share'),phone=overlay.querySelector('#ops-phone-share');
 const printButton=overlay.querySelector('#ops-print-share'),pdfButton=overlay.querySelector('#ops-pdf-share');
 const mobile=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 copy.hidden=mobile;phone.hidden=!mobile;printButton.disabled=true;pdfButton.disabled=true;
-overlay.querySelector('#ops-share-close').onclick=()=>overlay.style.display='none';
-overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.style.display='none'});
+overlay.querySelector('#ops-share-close').onclick=()=>overlay.classList.remove('ops-share-visible');
+overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.classList.remove('ops-share-visible')});
 let file=null;
 function nextDayLabel(date){
  const [day,month,year]=date.split('/').map(Number);
@@ -44,7 +44,7 @@ function draw(data){
 button.addEventListener('click',async()=>{
  const data=JSON.parse(document.getElementById('share-data').textContent);
  if(!data.drivers.length){feedback.textContent='No IN drivers with saved start times for this date.';return}
- status.textContent='Preparing image…';copy.disabled=true;phone.disabled=true;printButton.disabled=true;pdfButton.disabled=true;overlay.style.display='flex';
+ status.textContent='Preparing image…';copy.disabled=true;phone.disabled=true;printButton.disabled=true;pdfButton.disabled=true;overlay.classList.add('ops-share-visible');
  try{
   const canvas=draw(data);
   const logo=new Image();logo.src='/dulogix-logo.png';

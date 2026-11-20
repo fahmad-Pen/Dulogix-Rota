@@ -5,21 +5,21 @@ const allocationLabels={FD:'Full Day',HD:'Half Day',OFF:'Off',OFFICE:'Office',ST
 function isoWeek(date){const d=new Date(Date.UTC(date.getUTCFullYear(),date.getUTCMonth(),date.getUTCDate()));d.setUTCDate(d.getUTCDate()+4-(d.getUTCDay()||7));const year=d.getUTCFullYear();const start=new Date(Date.UTC(year,0,1));return {year,week:Math.ceil((((d-start)/86400000)+1)/7)};}
 const overlay=document.createElement('div');
 overlay.id='rota-share-overlay';
-overlay.style.cssText='position:fixed;inset:0;background:#10243ac9;z-index:1000;display:none;align-items:center;justify-content:center;padding:14px;overflow:auto';
-overlay.innerHTML='<div style="background:white;border-radius:12px;padding:18px;width:min(540px,100%);max-height:95vh;overflow:auto"><h2 style="margin:0 0 12px">Share driver rota</h2><img id="rota-share-preview" alt="Weekly rota card preview" style="width:100%;border:1px solid #dce5ef;border-radius:8px"><p id="rota-share-status" aria-live="polite"></p><div style="display:flex;gap:8px;flex-wrap:wrap"><button id="rota-copy-image" type="button" style="background:#137b53;color:white;font-size:15px;padding:12px;flex:1">📋 Copy image + open WhatsApp</button><button id="rota-mobile-direct" type="button" style="background:#137b53;color:white;font-size:15px;padding:12px;flex:1">📋 Copy + open driver</button><button id="rota-share-now" type="button" style="font-size:15px;padding:12px;flex:1">📲 Share on phone</button><button id="rota-share-close" type="button">Close</button></div></div>';
+
+overlay.innerHTML='<div class="rota-generated-0"><h2 class="rota-generated-1">Share driver rota</h2><img id="rota-share-preview" alt="Weekly rota card preview" class="rota-generated-2"><p id="rota-share-status" aria-live="polite"></p><div class="rota-generated-3"><button id="rota-copy-image" type="button" class="rota-generated-4">📋 Copy image + open WhatsApp</button><button id="rota-mobile-direct" type="button" class="rota-generated-5">📋 Copy + open driver</button><button id="rota-share-now" type="button" class="rota-generated-6">📲 Share on phone</button><button id="rota-share-close" type="button">Close</button></div></div>';
 document.body.append(overlay);
 const preview=overlay.querySelector('#rota-share-preview'),status=overlay.querySelector('#rota-share-status'),shareButton=overlay.querySelector('#rota-share-now');
-const previewFrame=document.createElement('div');
-previewFrame.style.cssText='max-height:65vh;overflow:auto;border:1px solid #dce5ef;border-radius:8px;background:#f2f5f9';
+const previewFrame=document.createElement('div');previewFrame.className='rota-share-preview-frame';
+
 preview.parentElement.insertBefore(previewFrame,preview);
 previewFrame.append(preview);
-const previewControls=document.createElement('div');
-previewControls.style.cssText='display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:8px 0';
+const previewControls=document.createElement('div');previewControls.className='rota-share-preview-controls';
+
 previewControls.innerHTML='<button type="button" id="sc-preview-fit">Fit preview</button><button type="button" id="sc-preview-actual">View at 100% (scroll)</button><span id="sc-preview-size"></span>';
 previewFrame.after(previewControls);
 const previewSize=previewControls.querySelector('#sc-preview-size');
-previewControls.querySelector('#sc-preview-fit').onclick=()=>{preview.style.width='100%';preview.style.maxWidth='100%'};
-previewControls.querySelector('#sc-preview-actual').onclick=()=>{preview.style.width=preview.naturalWidth+'px';preview.style.maxWidth='none'};
+previewControls.querySelector('#sc-preview-fit').onclick=()=>{preview.classList.remove('rota-preview-actual')};
+previewControls.querySelector('#sc-preview-actual').onclick=()=>{preview.classList.add('rota-preview-actual')};
 preview.addEventListener('load',()=>{previewSize.textContent=preview.naturalWidth+' ? '+preview.naturalHeight+' pixels'});
 
 let file=null,clipboardImage=null,shareText='',target='';
@@ -29,15 +29,15 @@ const scorecardCopy=document.createElement('button');
 scorecardCopy.type='button';
 scorecardCopy.id='scorecard-copy-only';
 scorecardCopy.textContent='Copy full-resolution image';
-scorecardCopy.style.cssText='background:#17456c;color:white;font-size:15px;padding:12px;flex:1';
+
 const scorecardOpen=document.createElement('button');
 scorecardOpen.type='button';
 scorecardOpen.id='scorecard-whatsapp-only';
 scorecardOpen.textContent='Open driver WhatsApp';
-scorecardOpen.style.cssText='background:#137b53;color:white;font-size:15px;padding:12px;flex:1';
+
 let preparedOnCopied=null;
-const scorecardActions=document.createElement('div');
-scorecardActions.style.cssText='display:none;gap:8px;flex-wrap:wrap;margin:12px 0';
+const scorecardActions=document.createElement('div');scorecardActions.className='rota-share-scorecard-actions';
+
 scorecardActions.append(scorecardCopy,scorecardOpen);
 overlay.querySelector('#rota-share-close').parentElement.after(scorecardActions);
 scorecardCopy.onclick=async()=>{
@@ -58,8 +58,8 @@ scorecardOpen.onclick=()=>{
 };
 const documentActions=document.createElement('div');
 documentActions.id='scorecard-document-actions';
-documentActions.style.cssText='display:none;gap:8px;flex-wrap:wrap;margin-top:12px';
-documentActions.innerHTML='<button type="button" id="scorecard-save-document" style="background:#17456c;color:white;font-size:15px;padding:12px;flex:1">Download original image</button><button type="button" id="scorecard-open-chat" style="background:#137b53;color:white;font-size:15px;padding:12px;flex:1">Open driver WhatsApp</button>';
+
+documentActions.innerHTML='<button type="button" id="scorecard-save-document" class="rota-generated-7">Download original image</button><button type="button" id="scorecard-open-chat" class="rota-generated-8">Open driver WhatsApp</button>';
 overlay.querySelector('#rota-share-close').parentElement.after(documentActions);
 documentActions.querySelector('#scorecard-save-document').onclick=()=>{
  if(!file)return;
@@ -77,20 +77,37 @@ documentActions.querySelector('#scorecard-open-chat').onclick=()=>{
 const downloadOriginal=documentActions.querySelector('#scorecard-save-document');
 downloadOriginal.textContent='Download high-quality JPG';
 scorecardActions.append(downloadOriginal);
-scorecardActions.style.flexDirection='column';
+scorecardActions.classList.add('rota-share-scorecard-column');
 scorecardOpen.remove();
-scorecardActions.style.alignItems='stretch';
-scorecardActions.style.gap='8px';
+
+
 scorecardCopy.textContent='Copy image + open driver WhatsApp';
-scorecardCopy.style.background='#e9f0f6';
-scorecardCopy.style.color='#17456c';
+
+
 documentActions.remove();
 
 
 const isMobile=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 copyButton.hidden=isMobile;shareButton.hidden=!isMobile;mobileDirect.hidden=!/Android/i.test(navigator.userAgent);
-overlay.querySelector('#rota-share-close').onclick=()=>{overlay.style.display='none'};
-const shareStyle=document.createElement('style');shareStyle.textContent='#rota-share-overlay.scorecard-share-mode>div{width:min(720px,100%)!important;padding:24px!important;border-radius:18px!important;box-shadow:0 22px 80px #0004}#rota-share-overlay.scorecard-share-mode h2{font-size:21px;color:#143e61;margin-bottom:16px!important}#rota-share-overlay.scorecard-share-mode #rota-share-status{font-size:14px;line-height:1.5;color:#395671;background:#f0f6fb;padding:12px;border-radius:9px}#rota-share-overlay.scorecard-share-mode #rota-share-preview{border:0!important}#rota-share-overlay.scorecard-share-mode #scorecard-document-actions button,#rota-share-overlay.scorecard-share-mode #rota-share-close,#rota-share-overlay.scorecard-share-mode #rota-copy-image,#rota-share-overlay.scorecard-share-mode #rota-mobile-direct{border-radius:9px!important;font-weight:700}#rota-share-overlay.scorecard-share-mode #rota-share-close{padding:10px 16px!important;border:1px solid #b5cce0;background:#fff;color:#17456c}#rota-share-overlay.scorecard-share-mode #scorecard-document-actions{gap:12px!important}';document.head.append(shareStyle);
+// Keep close and sharing controls visible above the preview in both rota and report modes.
+const dialog=overlay.querySelector('.rota-generated-0');
+const heading=overlay.querySelector('.rota-generated-1');
+const closeButton=overlay.querySelector('#rota-share-close');
+const header=document.createElement('div');
+header.className='rota-share-header';
+heading.before(header);
+header.append(heading,closeButton);
+closeButton.textContent='×';
+closeButton.setAttribute('aria-label','Close share preview');
+closeButton.title='Close';
+const actionRow=overlay.querySelector('.rota-generated-3');
+previewFrame.before(actionRow,scorecardActions);
+closeButton.onclick=()=>{overlay.classList.remove('rota-share-visible')};
+// Only clicks on the dark backdrop close the dialog; clicks inside remain interactive.
+overlay.addEventListener('click',event=>{
+ if(event.target===overlay)closeButton.click();
+});
+
 function round(ctx,x,y,w,h,r){ctx.beginPath();ctx.roundRect(x,y,w,h,r);ctx.fill()}
 function createCard(data){
  const canvas=document.createElement('canvas');canvas.width=900;canvas.height=1170;
@@ -115,11 +132,11 @@ function createCard(data){
  return canvas;
 }
 async function open(data){
- scorecardActions.style.display='none';
+ scorecardActions.classList.remove('rota-share-actions-visible');
  shareButton.hidden=!isMobile;
  copyButton.hidden=isMobile;
  mobileDirect.hidden=!/Android/i.test(navigator.userAgent);
- file=null;clipboardImage=null;status.textContent='Preparing rota card…';shareButton.disabled=true;copyButton.disabled=true;mobileDirect.disabled=true;overlay.style.display='flex';
+ file=null;clipboardImage=null;status.textContent='Preparing rota card…';shareButton.disabled=true;copyButton.disabled=true;mobileDirect.disabled=true;overlay.classList.add('rota-share-visible');
  try{const response=await fetch('/api/rota-card/design',{credentials:'same-origin',cache:'no-store'});if(response.ok)design=await response.json();}catch(e){}
  const canvas=createCard(data);
  const logo=new Image();logo.src='/dulogix-logo.png';
@@ -169,10 +186,10 @@ window.openDulogixPreparedImage=async(data)=>{
  shareText=data.description||data.title||'Dulogix report';
  overlay.querySelector('h2').textContent=data.title||'Share image';
  const old=preview.dataset.blobUrl;if(old)URL.revokeObjectURL(old);
- const url=URL.createObjectURL(file);preview.dataset.blobUrl=url;preview.src=url;preview.style.width='100%';preview.style.maxWidth='100%';
- overlay.style.display='flex';
+ const url=URL.createObjectURL(file);preview.dataset.blobUrl=url;preview.src=url;preview.classList.remove('rota-preview-actual');
+ overlay.classList.add('rota-share-visible');
  overlay.classList.toggle('scorecard-share-mode',documentMode);
- scorecardActions.style.display=documentMode?'flex':'none';
+ scorecardActions.classList.toggle('rota-share-actions-visible',documentMode);
  copyButton.textContent='?? Copy image + open WhatsApp';
  shareButton.disabled=false;copyButton.disabled=false;mobileDirect.disabled=false;
  shareButton.hidden=!isMobile;

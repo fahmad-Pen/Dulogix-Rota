@@ -1,0 +1,8 @@
+.sc-panel summary{font-size:19px;font-weight:800;color:#143e61}.sc-panel details>div{gap:10px!important}.sc-panel button,.sc-panel select{border-radius:8px;padding:9px 12px;border:1px solid #b7cce0}.sc-panel #sc-start,.sc-panel #sc-confirm{background:#18577f;color:white;font-weight:750;border-color:#18577f}.sc-panel #sc-summary{font-weight:750;font-size:15px;margin:18px 0}.sc-panel #sc-progress{background:white;border:1px solid #d3e2ef;border-radius:9px;padding:12px}.sc-sent-status{letter-spacing:.1px}
+.sc-panel{padding:20px;margin:20px 0;background:#f1f8ff;border:1px solid #cbdde9;border-radius:14px}
+.sc-panel-summary{cursor:pointer;font-weight:800}
+.sc-panel-toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+.sc-sent-status{display:block;text-align:center;font-size:13px;font-weight:800;margin:8px 0;white-space:nowrap;letter-spacing:-.2px}
+.sc-status-dot{display:inline-block;width:12px;height:12px;border-radius:50%;background:currentColor;vertical-align:middle;margin-right:5px}
+.sc-status-sent{color:#087a39}.sc-status-resend{color:#b56b00}.sc-status-not-sent{color:#b42335}
+.sc-individual-confirm{background:#18577f;color:white;border:0;border-radius:8px;padding:10px 15px;font-weight:750;cursor:pointer}

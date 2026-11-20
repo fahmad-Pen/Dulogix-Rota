@@ -1,0 +1,1 @@
+(function(){const t=document.getElementById("performance-drivers");if(!t)return;const row=t.tHead.rows[0];const update=()=>t.style.setProperty("--performance-header-top",row.getBoundingClientRect().height+"px");update();window.addEventListener("resize",update);if(window.ResizeObserver)new ResizeObserver(update).observe(row)})();

@@ -1,0 +1,35 @@
+#rota-share-overlay{position:fixed;inset:0;background:#10243ac9;z-index:1000;display:none;align-items:center;justify-content:center;padding:14px;overflow:auto}
+#rota-share-overlay .rota-share-preview-frame{max-height:65vh;overflow:auto;border:1px solid #dce5ef;border-radius:8px;background:#f2f5f9}
+#rota-share-overlay .rota-share-preview-controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:8px 0}
+#rota-share-overlay #scorecard-copy-only{background:#17456c;color:white;font-size:15px;padding:12px;flex:1}
+#rota-share-overlay #scorecard-whatsapp-only{background:#137b53;color:white;font-size:15px;padding:12px;flex:1}
+#rota-share-overlay .rota-share-scorecard-actions{display:none;gap:8px;flex-wrap:wrap;margin:12px 0}
+#rota-share-overlay #scorecard-document-actions{display:none;gap:8px;flex-wrap:wrap;margin-top:12px}
+#rota-share-overlay.scorecard-share-mode>div{width:min(720px,100%)!important;padding:24px!important;border-radius:18px!important;box-shadow:0 22px 80px #0004}#rota-share-overlay.scorecard-share-mode h2{font-size:21px;color:#143e61;margin-bottom:16px!important}#rota-share-overlay.scorecard-share-mode #rota-share-status{font-size:14px;line-height:1.5;color:#395671;background:#f0f6fb;padding:12px;border-radius:9px}#rota-share-overlay.scorecard-share-mode #rota-share-preview{border:0!important}#rota-share-overlay.scorecard-share-mode #scorecard-document-actions button,#rota-share-overlay.scorecard-share-mode #rota-share-close,#rota-share-overlay.scorecard-share-mode #rota-copy-image,#rota-share-overlay.scorecard-share-mode #rota-mobile-direct{border-radius:9px!important;font-weight:700}#rota-share-overlay.scorecard-share-mode #rota-share-close{padding:10px 16px!important;border:1px solid #b5cce0;background:#fff;color:#17456c}#rota-share-overlay.scorecard-share-mode #scorecard-document-actions{gap:12px!important}
+#rota-share-overlay.rota-share-visible{display:flex}
+#rota-share-overlay .rota-preview-actual{width:auto;max-width:none}
+#rota-share-overlay .rota-share-scorecard-actions.rota-share-scorecard-column{flex-direction:column;align-items:stretch;gap:8px}
+#rota-share-overlay .rota-share-scorecard-column #scorecard-copy-only{background:#e9f0f6;color:#17456c}
+#rota-share-overlay .rota-share-scorecard-actions.rota-share-actions-visible{display:flex}
+#rota-share-overlay #rota-share-preview{width:100%;max-width:100%}
+#rota-share-overlay .rota-generated-0{background:white;border-radius:12px;padding:18px;width:min(540px,100%);max-height:95vh;overflow:auto}
+#rota-share-overlay .rota-generated-1{margin:0 0 12px}
+#rota-share-overlay .rota-generated-2{width:100%;border:1px solid #dce5ef;border-radius:8px}
+#rota-share-overlay .rota-generated-3{display:flex;gap:8px;flex-wrap:wrap}
+#rota-share-overlay .rota-generated-4{background:#137b53;color:white;font-size:15px;padding:12px;flex:1}
+#rota-share-overlay .rota-generated-5{background:#137b53;color:white;font-size:15px;padding:12px;flex:1}
+#rota-share-overlay .rota-generated-6{font-size:15px;padding:12px;flex:1}
+#rota-share-overlay .rota-generated-7{background:#17456c;color:white;font-size:15px;padding:12px;flex:1}
+#rota-share-overlay .rota-generated-8{background:#137b53;color:white;font-size:15px;padding:12px;flex:1}
+
+/* Shared rota and performance-report preview controls. */
+#rota-share-overlay .rota-share-header{display:flex;align-items:center;justify-content:space-between;gap:12px;position:sticky;top:-18px;z-index:2;background:#fff;padding:8px 0 12px}
+#rota-share-overlay .rota-share-header .rota-generated-1{margin:0;min-width:0}
+#rota-share-overlay .rota-share-header #rota-share-close{flex:0 0 auto;display:grid;place-items:center;width:38px;height:38px;padding:0!important;border:1px solid #cbd5e1;border-radius:9px;background:#fff;color:#24364b;font-size:27px;font-weight:400;line-height:1;cursor:pointer}
+#rota-share-overlay .rota-share-header #rota-share-close:hover{background:#eef3f8}
+#rota-share-overlay .rota-generated-3,#rota-share-overlay .rota-share-scorecard-actions{margin:0 0 12px}
+#rota-share-overlay.scorecard-share-mode .rota-share-header{top:-24px}
+
+/* Share actions should read as buttons, not full-width headings. */
+#rota-share-overlay .rota-generated-3{justify-content:flex-start}
+#rota-share-overlay .rota-generated-3 .rota-generated-4,#rota-share-overlay .rota-generated-3 .rota-generated-5,#rota-share-overlay .rota-generated-3 .rota-generated-6{flex:0 1 auto;width:auto;max-width:100%;padding:11px 18px;cursor:pointer}

@@ -82,6 +82,6 @@ final class DriverRequirementsController extends AbstractController
     }
 
     private function page(string $content): Response {
-        return new Response('<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Driver requirements · Dulogix</title>'.SectionAccess::CSS.'<style>body{background:#f4f7fb;color:#17314e;font:15px system-ui;margin:0}main{max-width:1050px;margin:32px auto;padding:0 18px}.card{background:white;border:1px solid #dbe3ee;border-radius:9px;padding:20px;margin:15px 0}input,button{padding:10px;margin-right:8px;border:1px solid #cbd7e4;border-radius:5px}button{background:#194b76;color:white;cursor:pointer}table{border-collapse:collapse;width:100%}th,td{border-bottom:1px solid #dbe3ee;padding:12px;text-align:left}a{color:#194b76}</style></head><body><main><p><a href="/admin/settings">← Settings</a></p>'.$content.'</main></body></html>');
+        return new Response('<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Driver requirements · Dulogix</title><link rel="stylesheet" href="/driver-requirements.css?v=1"></head><body><main><p><a href="/admin/settings">← Settings</a></p>'.$content.'</main></body></html>');
     }
 }
