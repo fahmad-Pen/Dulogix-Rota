@@ -6,3 +6,12 @@
 .sc-status-dot{display:inline-block;width:12px;height:12px;border-radius:50%;background:currentColor;vertical-align:middle;margin-right:5px}
 .sc-status-sent{color:#087a39}.sc-status-resend{color:#b56b00}.sc-status-not-sent{color:#b42335}
 .sc-individual-confirm{background:#18577f;color:white;border:0;border-radius:8px;padding:10px 15px;font-weight:750;cursor:pointer}
+/* WhatsApp distribution: familiar green identity without changing controls or workflow. */
+.sc-panel{background:#e2f1e9;border:1px solid #a6d2b9;border-left:4px solid #128c4a;border-radius:9px;padding:10px 14px;margin:12px 0}
+.sc-panel summary,.sc-panel .sc-panel-summary{font-size:16px;font-weight:700;line-height:1.35}
+.sc-panel-summary::marker{font-size:12px}
+.sc-panel summary,.sc-panel .sc-panel-summary{color:#075e37}
+.sc-panel-summary::before{content:'☎';display:inline-grid;place-items:center;width:27px;height:27px;margin-right:9px;border-radius:50%;background:#25d366;color:#fff;font-size:19px;font-weight:700;vertical-align:middle}
+.sc-panel #sc-start,.sc-panel #sc-confirm{background:#128c4a;border-color:#128c4a;color:#fff}
+.sc-panel #sc-start:hover,.sc-panel #sc-confirm:hover{background:#075e37}
+.sc-panel button:focus-visible,.sc-panel select:focus-visible,.sc-panel summary:focus-visible{outline:3px solid #128c4a;outline-offset:3px}

@@ -1,3 +1,12 @@
+/* Restrained performance week toolbar, consistent with the reporting UI. */
+.weekbar.perf-style-67a4836a4a{background:#fff;border:1px solid #d5e0ec;border-radius:10px;padding:12px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;box-shadow:0 1px 3px #17314e08}
+.weekbar #performance-week{color:#17314e;font-weight:700;font-size:15px;letter-spacing:0}
+.weekbar #week-prev,.weekbar #week-next{display:inline-flex;align-items:center;justify-content:center;background:#f7f9fc;color:#214b70;border:1px solid #cdd9e6;border-radius:7px;min-width:34px;min-height:34px;font-size:12px;text-decoration:none;transition:background-color .15s ease,border-color .15s ease}
+.weekbar #week-prev:hover,.weekbar #week-next:hover{background:#eaf1f8;border-color:#a8bfd5}
+.weekbar label[for="week-calendar"]{color:#65788e;font-size:13px;font-weight:500;margin-left:14px}
+.weekbar #week-calendar{background:#fff;border:1px solid #cdd9e6;border-radius:7px;color:#17314e;padding:7px 10px;min-height:36px;font:inherit;font-size:14px}
+.weekbar #week-prev:focus-visible,.weekbar #week-next:focus-visible,.weekbar #week-calendar:focus-visible{outline:2px solid #498fc3;outline-offset:2px}
+@media(max-width:600px){.weekbar.perf-style-67a4836a4a{padding:11px 12px;gap:9px}.weekbar label[for="week-calendar"]{margin-left:0}}
 .perf-style-3f8a2ca06b{color:#17683f}
 .perf-style-2e86f203a8{color:#a42323}
 .perf-style-f4e719ae06{margin:10px 0}
