@@ -30,6 +30,16 @@
 #rota-share-overlay .rota-generated-3,#rota-share-overlay .rota-share-scorecard-actions{margin:0 0 12px}
 #rota-share-overlay.scorecard-share-mode .rota-share-header{top:-24px}
 
+/* Scorecard sharing: equal-height actions side by side on desktop. */
+#rota-share-overlay.scorecard-share-mode .rota-share-scorecard-actions.rota-share-scorecard-column{display:flex;flex-direction:row;align-items:stretch;gap:10px;flex-wrap:nowrap}
+#rota-share-overlay.scorecard-share-mode .rota-share-scorecard-column #scorecard-copy-only,#rota-share-overlay.scorecard-share-mode .rota-share-scorecard-column #scorecard-save-document{flex:1 1 0;min-width:0;width:auto;border-radius:9px;border:1px solid transparent;padding:11px 13px;font-size:14px;font-weight:700;line-height:1.35;cursor:pointer;white-space:normal}
+#rota-share-overlay.scorecard-share-mode .rota-share-scorecard-column #scorecard-copy-only{background:#128c4a;border-color:#128c4a;color:#fff}
+#rota-share-overlay.scorecard-share-mode .rota-share-scorecard-column #scorecard-copy-only:hover{background:#075e37}
+#rota-share-overlay.scorecard-share-mode .rota-share-scorecard-column #scorecard-save-document{background:#194a73;border-color:#194a73;color:#fff}
+#rota-share-overlay.scorecard-share-mode .rota-share-scorecard-column #scorecard-save-document:hover{background:#123957}
+#rota-share-overlay.scorecard-share-mode .rota-share-scorecard-column button:focus-visible{outline:3px solid #73b4ed;outline-offset:2px}
+@media(max-width:540px){#rota-share-overlay.scorecard-share-mode .rota-share-scorecard-actions.rota-share-scorecard-column{flex-direction:column}}
+
 /* Share actions should read as buttons, not full-width headings. */
 #rota-share-overlay .rota-generated-3{justify-content:flex-start}
 #rota-share-overlay .rota-generated-3 .rota-generated-4,#rota-share-overlay .rota-generated-3 .rota-generated-5,#rota-share-overlay .rota-generated-3 .rota-generated-6{flex:0 1 auto;width:auto;max-width:100%;padding:11px 18px;cursor:pointer}
