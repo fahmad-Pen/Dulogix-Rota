@@ -1,0 +1,1 @@
+document.getElementById("driver-search").addEventListener("input",function(){const q=this.value.toLowerCase().trim();document.querySelectorAll("#performance-drivers tbody tr").forEach(r=>r.hidden=!r.cells[0].textContent.toLowerCase().includes(q));});

@@ -22,7 +22,7 @@ final class GlobalNavigationListener
         $html = $response->getContent();
         if (!is_string($html) || !str_contains($html, '</header>') || str_contains($html, 'id="du-main-nav"')) return;
         $html = preg_replace('~</header>~i', SectionAccess::navigation($user).'</header>', $html, 1);
-        if (str_contains($html, '</head>')) $html = preg_replace('~</head>~i', SectionAccess::CSS.'</head>', $html, 1);
+        if (str_contains($html, '</head>')) $html = preg_replace('~</head>~i', '<link rel="stylesheet" href="/du-navigation.css?v=1"></head>', $html, 1);
         $response->setContent($html);
     }
 }

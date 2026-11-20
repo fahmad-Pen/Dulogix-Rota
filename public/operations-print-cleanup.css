@@ -1,0 +1,59 @@
+@media print {
+  .lane-upload,
+  main > details.notice,
+  main > .notice,
+  .driver-change-trigger,
+  .instruction-overview,
+  .allocation-multi,
+  .ops-filter-group,
+  .ops-select-toolbar,
+  .ops-print-choice {
+    display: none !important;
+  }
+}
+
+/* Print-only spacing corrections: remove checkbox gutter and keep lane colours legible. */
+@media print {
+  body:not(.ops-compact-print-active) main .card table tbody td:first-child {
+    padding-left: 4px !important;
+  }
+  body:not(.ops-compact-print-active) .entry,
+  body:not(.ops-compact-print-active) .column-head {
+    grid-template-columns: 7% 8% 8% 8% 6% 8% 7% 12% 7% 8% 7% 7% 5% !important;
+  }
+  body:not(.ops-compact-print-active) .entry .lane-value.lane-color {
+    white-space: nowrap !important;
+    overflow-wrap: normal !important;
+    word-break: normal !important;
+    padding: 3px 1px !important;
+    font-size: 8px !important;
+    min-width: 0 !important;
+  }
+}
+
+@media print {
+  /* Allow the audit and score widgets to shrink inside their assigned grid cells. */
+  body:not(.ops-compact-print-active) .entry > .check-audit,
+  body:not(.ops-compact-print-active) .entry > .score-edit {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    justify-self: stretch !important;
+    overflow: hidden !important;
+  }
+  body:not(.ops-compact-print-active) .entry .check-audit small,
+  body:not(.ops-compact-print-active) .entry .score-edit small,
+  body:not(.ops-compact-print-active) .entry .stamp,
+  body:not(.ops-compact-print-active) .entry .stamp-date,
+  body:not(.ops-compact-print-active) .entry .stamp-time {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+    word-break: normal !important;
+    text-align: center !important;
+    box-sizing: border-box !important;
+  }
+}

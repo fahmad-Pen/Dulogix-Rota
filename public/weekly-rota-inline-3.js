@@ -1,0 +1,1 @@
+try{const p=document.getElementById('weekly-operations-planning');p.open=localStorage.getItem('dulogix-weekly-planning-open')==='true';p.addEventListener('toggle',()=>localStorage.setItem('dulogix-weekly-planning-open',String(p.open)));}catch(e){}

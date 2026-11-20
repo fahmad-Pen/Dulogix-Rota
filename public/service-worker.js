@@ -46,7 +46,9 @@ self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', (event) => event.waitUntil(self.clients.claim()));
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET' || new URL(event.request.url).origin !== self.location.origin) return;
-  event.respondWith(event.request.mode === 'navigate'
+  // Keep requests network-only; turn a rejected fetch into an explicit
+  // network-error response so the service worker has no unhandled rejection.
+  event.respondWith((event.request.mode === 'navigate'
     ? fetch(event.request, { cache: 'no-store' })
-    : fetch(event.request));
+    : fetch(event.request)).catch(() => Response.error()));
 });

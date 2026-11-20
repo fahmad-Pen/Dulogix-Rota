@@ -12,6 +12,6 @@ $zip->addFromString('xl/worksheets/sheet2.xml','<worksheet xmlns="http://schemas
 $zip->close();
 try {
  $rows=(new \App\Controller\LanePlanReader())->read($path);
- if(count($rows)!==1 || $rows['A17ZQBVEHI48YL']['route']!=='CA_A215')throw new \RuntimeException('Reader did not match sample data');
+ if(count($rows)!==1 || $rows['CA_A215']['color']!=='YELLOW' || $rows['CA_A215']['holding_time']!=='10:30')throw new \RuntimeException('Reader did not match sample data');
  echo "PASS: LANE PLAN Excel reader with named worksheet and inline strings\n";
 }finally{unlink($path);}

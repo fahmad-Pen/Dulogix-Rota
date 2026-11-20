@@ -138,7 +138,7 @@ async function save(section){
  loading=true;buttons[section].disabled=true;
  fields[section].forEach(el=>el.disabled=true);
  states[section].textContent='Saving…';
- const body=new URLSearchParams({_token:window.DULOGIX_SHIFT_TOKEN,date:date.value,section,
+ const body=new URLSearchParams({_token:document.querySelector('main')?.dataset.shiftToken,date:date.value,section,
   ementor:pending.some(([key])=>key==='ementor')?'1':'0',
   clear_quote:pending.some(([key])=>key==='clear_quote')?'1':'0',
   fisco_score:pending.some(([key])=>key==='fisco_score')?$('shift-fisco').value:'',
@@ -159,7 +159,7 @@ $('shift-ack').addEventListener('click',async()=>{
  if(!currentHash)return;
  const button=$('shift-ack');button.disabled=true;
  try{
-  const body=new URLSearchParams({_token:window.DULOGIX_SHIFT_TOKEN,date:date.value,section:'ack',instruction_hash:currentHash});
+  const body=new URLSearchParams({_token:document.querySelector('main')?.dataset.shiftToken,date:date.value,section:'ack',instruction_hash:currentHash});
   const response=await fetch('/driver/daily-check/data',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body,credentials:'same-origin'});
   const result=await response.json();if(!response.ok||!result.ok)throw Error(result.error||'Unable to acknowledge');
   await load();

@@ -158,38 +158,7 @@
   // A dedicated sorting row keeps the group and metric headings aligned.
   const sortRow = table.tHead.insertRow(1);
   sortRow.className = "performance-sort-row";
-  const style = document.createElement("style");
-  style.textContent = "#performance-drivers thead tr.performance-sort-row th{background:#aebbc9;color:#102d48;border:1px solid #8395a8;padding:5px 2px!important;height:38px;min-width:0;text-align:center;vertical-align:middle}#performance-drivers thead tr:nth-child(3) th{background:#aebbc9;color:#102d48;text-align:center;border:1px solid #8395a8;padding:15px 10px;font-size:12px}#performance-drivers thead tr:nth-child(4) th{background:#d8e1eb;color:#102d48;text-align:center;border:1px solid #a5b4c4;padding:8px 5px;font-size:13px;line-height:1.4}#performance-drivers thead tr:nth-child(4) th small{display:block;color:#bb2437;font-weight:800;margin-top:5px}#performance-drivers .performance-sort-controls{display:flex;justify-content:center;gap:4px;margin:0}#performance-drivers .performance-sort-button{font-size:14px;line-height:1.2;padding:2px 6px}";
-  style.textContent += "#performance-drivers thead tr.performance-bottom-row th{background:#aebbc9;border:1px solid #8395a8;padding:7px 2px;height:43px;text-align:center}#performance-drivers .performance-bottom-button{background:#17456c;color:#fff;border:1px solid #17456c;border-radius:5px;padding:5px 7px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap}#performance-drivers .performance-bottom-button:hover{background:#0e304d}.performance-bottom-dialog{border:1px solid #bed0e1;border-radius:14px;padding:24px;width:min(540px,94vw);max-height:85vh;color:#173b60;box-shadow:0 16px 60px #001b3540}.performance-bottom-dialog::backdrop{background:#102a45a8}.performance-bottom-dialog h2{margin:0 0 8px}.performance-bottom-dialog p{color:#55718c}.performance-bottom-dialog ol{padding-left:28px;max-height:55vh;overflow:auto}.performance-bottom-dialog li{padding:9px 5px;border-bottom:1px solid #d8e1eb}.performance-bottom-dialog li span{float:right;font-weight:700}.performance-bottom-dialog>button{margin-top:12px;padding:9px 20px;border-radius:6px;background:#17456c;color:white;border:0;cursor:pointer}";
-  style.textContent += "#performance-drivers thead{position:sticky;top:0;z-index:8;filter:drop-shadow(0 3px 3px rgba(16,45,72,.12))}#performance-drivers thead th{position:static!important;top:auto!important}#performance-drivers thead tr.performance-bottom-row th{height:36px;padding:4px 2px}#performance-drivers thead tr.performance-sort-row th{height:34px;padding:3px 2px!important}#performance-drivers thead tr:nth-child(3) th{padding:9px 7px}#performance-drivers thead tr:nth-child(4) th{padding:7px 4px}";
-  style.textContent += `
-.performance-bottom-dialog{padding:0;width:min(680px,95vw);max-height:92vh;overflow:auto;border:0;border-radius:16px;color:#173b60;background:#fff}
-.performance-bottom-dialog .bottom-report-header{background:linear-gradient(120deg,#123657,#245b83);padding:25px 30px 21px;color:white}
-.performance-bottom-dialog .bottom-report-eyebrow{font-size:11px;font-weight:800;letter-spacing:1.7px;opacity:.8;margin-bottom:9px}
-.performance-bottom-dialog h2{font-size:25px;margin:0 0 8px;color:white}
-.performance-bottom-dialog .bottom-report-header p{color:#e0ebf5;font-size:13px;margin:0}
-.performance-bottom-dialog .bottom-report-table{width:calc(100% - 48px);margin:20px 24px 8px;border-collapse:collapse;font-size:14px}
-.performance-bottom-dialog .bottom-report-table th{position:static;background:#eaf1f8;color:#536d87;text-transform:uppercase;letter-spacing:.6px;font-size:11px;padding:11px 12px}
-.performance-bottom-dialog .bottom-report-table td{padding:11px 12px;border-bottom:1px solid #e4ebf2;font-weight:600}
-.performance-bottom-dialog .bottom-report-table td:first-child{color:#7790a5;width:42px}
-.performance-bottom-dialog .bottom-report-table td:last-child{text-align:right}
-.performance-bottom-dialog .bottom-report-value{color:#164e75;font-weight:800!important;font-variant-numeric:tabular-nums}
-.performance-bottom-dialog .bottom-report-table tbody tr:nth-child(even){background:#f6f9fc}
-.performance-bottom-dialog .bottom-report-footer{padding:6px 30px 17px;color:#8495a8;font-size:11px}
-.performance-bottom-dialog .bottom-report-actions{position:sticky;bottom:0;background:#f4f7fb;border-top:1px solid #dbe5ee;padding:15px 24px;display:flex;gap:9px;flex-wrap:wrap}
-.performance-bottom-dialog .bottom-report-actions button{margin:0;padding:10px 13px;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;border:1px solid #b9cddd;background:white;color:#17456c}
-.performance-bottom-dialog .bottom-report-actions .bottom-action-share{background:#16834a;color:white;border-color:#16834a}
-.performance-bottom-dialog .bottom-report-actions .bottom-action-close{margin-left:auto;background:#17456c;color:white}
-@media print{
-body:has(.performance-bottom-dialog[open]) > *:not(.performance-bottom-dialog){display:none!important}
-.performance-bottom-dialog[open]{position:static!important;display:block!important;width:100%!important;max-height:none!important;overflow:visible!important;border:0!important;box-shadow:none!important;margin:0!important;padding:0!important}
-.performance-bottom-dialog::backdrop{display:none}
-.performance-bottom-dialog .bottom-report-actions{display:none!important}
-.performance-bottom-dialog .bottom-report-header{print-color-adjust:exact;-webkit-print-color-adjust:exact}
-.performance-bottom-dialog .bottom-report-table{width:94%;margin:18px 3%}
-@page{size:A4 portrait;margin:14mm}
-}`;
-  document.head.append(style);
+
   columns.forEach(({ key, label }) => {
     const cell = document.createElement("th");
     cell.scope = "col";

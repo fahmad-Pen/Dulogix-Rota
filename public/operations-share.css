@@ -1,0 +1,9 @@
+.ops-share-overlay{position:fixed;inset:0;background:#10243ac9;z-index:1000;display:none;align-items:center;justify-content:center;padding:14px;overflow:auto}
+.ops-share-overlay.ops-share-visible{display:flex}
+.ops-share-dialog{background:white;border-radius:12px;padding:18px;width:min(570px,100%);max-height:95vh;overflow:auto}
+.ops-share-dialog h2{margin:0 0 12px}
+#ops-share-preview{display:block;width:100%;border:1px solid #dce5ef;border-radius:8px}
+.ops-share-actions{display:flex;gap:8px;flex-wrap:wrap}
+.ops-share-actions button{font-size:15px;padding:12px}
+.ops-share-actions .ops-share-green{background:#137b53;color:white;flex:1}
+.ops-share-actions .ops-share-blue{background:#1d4e83;color:white}

@@ -3,11 +3,9 @@ const table=document.querySelector('main .card table');
 const printButton=document.getElementById('print-report');
 if(!table||!printButton)return;
 const rows=[...table.querySelectorAll('tbody tr[data-allocation]')];
-const style=document.createElement('style');
-style.textContent='.ops-print-choice{display:inline-flex;align-items:center;gap:6px;margin-right:8px;vertical-align:middle}.ops-print-choice input{width:16px;height:16px;accent-color:#176849;cursor:pointer}.ops-select-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:8px 0}.ops-select-toolbar button{background:#173b60;color:#fff;padding:8px 12px}.ops-select-toolbar .ops-select-all{background:white;color:#173b60}.ops-select-count{font-weight:600;color:#52677c}.ops-select-toolbar .ops-print-selected{background:#087d53}@media print{.ops-select-toolbar,.ops-print-choice{display:none!important}body.ops-print-only-selected tbody tr[data-allocation]:not(.ops-print-picked){display:none!important}body.ops-print-only-selected tbody tr[data-allocation].ops-print-picked{display:table-row!important}}';
-document.head.append(style);
+
 const toolbar=document.createElement('div');toolbar.className='ops-select-toolbar';
-const allLabel=document.createElement('label');allLabel.className='ops-print-choice';allLabel.style.marginRight='0';
+const allLabel=document.createElement('label');allLabel.className='ops-print-choice';allLabel.classList.add('ops-no-right-margin');
 const all=document.createElement('input');all.type='checkbox';all.setAttribute('aria-label','Select all displayed records for PDF');
 allLabel.append(all,document.createTextNode('Select all displayed'));
 const clear=document.createElement('button');clear.type='button';clear.className='ops-select-all';clear.textContent='Clear selection';
@@ -17,18 +15,16 @@ const exportAll=document.createElement('button');exportAll.type='button';exportA
 const exportSelected=document.createElement('button');exportSelected.type='button';exportSelected.textContent='Download Excel (selected)';
 toolbar.append(allLabel,clear,selected,exportAll,exportSelected,count);
 printButton.insertAdjacentElement('afterend',exportAll);
-exportAll.style.marginLeft='8px';
+exportAll.classList.add('ops-extra-left-margin');
 const bar=printButton.closest('.datebar');bar?.after(toolbar);
 
-const compactStyle=document.createElement('style');
-compactStyle.textContent=`#ops-compact-print{display:none}@media print{@page{size:A4 portrait;margin:11mm}body.ops-compact-print-active{background:#fff!important;margin:0!important;padding:0!important}body.ops-compact-print-active> :not(#ops-compact-print){display:none!important}body.ops-compact-print-active #ops-compact-print{display:block!important;position:static!important;visibility:visible!important;width:100%!important;margin:0!important;padding:0!important;color:#172d42!important;font:10pt Arial,sans-serif!important}#ops-compact-print h1{font-size:17pt;margin:0 0 5mm}#ops-compact-print .date{font-size:11pt;margin-bottom:6mm}#ops-compact-print table{display:table!important;width:100%!important;min-width:0!important;border-collapse:collapse!important;table-layout:fixed!important}#ops-compact-print thead{display:table-header-group!important}#ops-compact-print tr{display:table-row!important;break-inside:avoid;page-break-inside:avoid}#ops-compact-print th,#ops-compact-print td{display:table-cell!important;border:1px solid #8797a6!important;padding:6px 4px!important;white-space:normal!important;overflow-wrap:anywhere!important;vertical-align:middle!important;font-size:9pt!important;height:17mm!important}#ops-compact-print th{background:#e6eef6!important;text-align:left!important}#ops-compact-print th:nth-child(1){width:18%}#ops-compact-print th:nth-child(2){width:12%}#ops-compact-print th:nth-child(3){width:12%}#ops-compact-print th:nth-child(4){width:11%}#ops-compact-print th:nth-child(5){width:17%}#ops-compact-print th:nth-child(6){width:21%}#ops-compact-print th:nth-child(7){width:9%}#ops-compact-print .comments{white-space:pre-wrap!important}}`;
-document.head.append(compactStyle);
+
 window.addEventListener('afterprint',()=>{document.body.classList.remove('ops-compact-print-active');document.getElementById('ops-compact-print')?.remove();});
 const compactPrint=document.createElement('button');
 compactPrint.type='button';
 compactPrint.className='print-button';
 compactPrint.textContent='Print / PDF (A4) Few columns';
-compactPrint.style.marginLeft='8px';
+compactPrint.classList.add('ops-extra-left-margin');
 printButton.insertAdjacentElement('afterend',compactPrint);
 function escapeHtml(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 compactPrint.addEventListener('click',()=>{
@@ -97,19 +93,26 @@ function cellValue(cell){
 async function downloadExcel(onlySelected){
  const chosen=checkboxes.filter(({row,box})=>!row.hidden&&(!onlySelected||box.checked));
  if(!chosen.length)return;
- const headings=['Driver','Allocation','Van','Fixed','Start time','Rota status','Comments','Ementor','Clear Quote','FISCO score','Number of returns'];
+ const headings=['Driver','Allocation','Van','Fixed','Start time','Color','Holding','STG','Route','Status','Comments','Ementor','Clear Quote','FISCO score','Number of returns'];
  const rowsToExport=[headings,...chosen.map(({row})=>{
   const form=row.querySelector('form.entry');
-  const values=[...form.querySelectorAll('.flag,.pending')].map(el=>el.textContent.trim());
+  // Export the live form values rather than audit labels or timestamps.
+  const checks=[...form.querySelectorAll('.check-audit .flag')];
+  const ementor=checks[0]?.textContent.trim()||'';
+  const clearQuote=checks[1]?.textContent.trim()||'';
+  const fico=form.elements.namedItem('fisco_score')?.value??'';
+  const returns=form.elements.namedItem('returns_count')?.value??'';
+  const lane=[...form.querySelectorAll('.lane-value')].map(el=>el.textContent.trim());
   return [
    row.cells[0].querySelector('strong')?.textContent.trim()||'',
    row.dataset.allocation||'',
    form.elements.van.selectedOptions[0]?.textContent.trim()||'',
    form.elements.fixed.checked?'Yes':'No',
    form.elements.start_time.value||'',
+   lane[0]||'',lane[1]||'',lane[2]||'',lane[3]||'',
    form.querySelector('.status-pill')?.textContent.trim()||'',
    form.elements.comments.value||'',
-   ...values
+   ementor,clearQuote,fico,returns
   ];
  })];
  if(!window.dulogixSaveXlsx){
